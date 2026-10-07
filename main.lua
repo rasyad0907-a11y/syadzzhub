@@ -1,7 +1,27 @@
---// SYADZZ HUB (Rayfield UI Library Edition)
---// Menggunakan UI Library Modern + Anti Lag + Full Feature
+--// SYADZZ HUB - AUTO CLEANUP & RAYFIELD LOADER (FIXED EGG STEAL)
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- 1. HAPUS GUI LAMA JIKA MASIH ADA
+pcall(function()
+    if LocalPlayer.PlayerGui:FindFirstChild("SyadzzPrivateScript") then
+        LocalPlayer.PlayerGui.SyadzzPrivateScript:Destroy()
+    end
+    if game:GetService("CoreGui"):FindFirstChild("SyadzzPrivateScript") then
+        game:GetService("CoreGui").SyadzzPrivateScript:Destroy()
+    end
+end)
+
+-- 2. LOAD RAYFIELD UI LIBRARY
+local Rayfield
+local success, err = pcall(function()
+    Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
+
+if not success or not Rayfield then
+    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+end
 
 local Window = Rayfield:CreateWindow({
    Name = "SYADZZ HUB | Steal an Egg",
@@ -21,8 +41,6 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- SERVICES & VARIABLES
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 
 local Settings = {
@@ -46,7 +64,6 @@ local function isRealEggPrompt(prompt)
     local objectText = prompt.ObjectText:lower()
     local actionText = prompt.ActionText:lower()
 
-    -- BLOKIR: Event, Quest, Machine, Wisp, Chest, Daily, Shop
     if parentName:find("wisp") or parentName:find("machine") or parentName:find("quest") or 
        parentName:find("chest") or parentName:find("free") or parentName:find("gratis") or 
        grandParentName:find("wisp") or grandParentName:find("machine") or grandParentName:find("quest") then
@@ -58,7 +75,6 @@ local function isRealEggPrompt(prompt)
         return false
     end
 
-    -- TERIMA: Hanya jika ada kata Egg / Steal
     if parentName:find("egg") or objectText:find("egg") or actionText:find("steal") or actionText:find("curi") or actionText:find("take") then
         return true
     end
@@ -144,20 +160,30 @@ FilterTab:CreateToggle({
    Callback = function(Value) Settings.SelectedRarities["Secret"] = Value end,
 })
 
--- CORE LOOPS
+-- CORE LOOPS (FIXED INTERACTION DELAY)
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.3) do -- Mengubah jeda loop agar server sempat mendeteksi
         if Settings.AutoSteal then
             pcall(function()
                 local char = LocalPlayer.Character
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
                 for _, obj in pairs(Workspace:GetDescendants()) do
-                    if isRealEggPrompt(obj) then
+                    if isRealEggPrompt(obj) and Settings.AutoSteal then
                         if Settings.StealMethod == "Teleport" and obj.Parent and obj.Parent:IsA("BasePart") then
+                            -- Teleport ke lokasi telur
                             char.HumanoidRootPart.CFrame = obj.Parent.CFrame + Vector3.new(0, 2, 0)
+                            
+                            -- Jeda sebentar agar server mendaftarkan posisi karakter sebelum mengambil
+                            task.wait(0.15)
                         end
+                        
+                        -- Memicu interaksi telur
                         fireproximityprompt(obj)
+                        
+                        -- Jeda eksekusi agar karakter benar-benar mengambil telurnya
+                        task.wait(0.2)
+                        break -- Ambil satu per satu agar tidak lag/spam berlebihan
                     end
                 end
             end)
