@@ -1,11 +1,14 @@
 --// SYADZZ PRIVATE SCRIPT
---// LocalScript -> StarterPlayerScripts
+--// LocalScript -> StarterPlayerScripts / Executor Script
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 -- PASSWORD
 local PASSWORD = "SYADZZ123"
+
+-- STATE FITUR
+local autoStealActive = false
 
 --==================================================
 -- GUI
@@ -123,7 +126,7 @@ menuStroke.Parent = menu
 local menuTitle = Instance.new("TextLabel")
 menuTitle.Size = UDim2.new(1, 0, 0, 55)
 menuTitle.BackgroundTransparency = 1
-menuTitle.Text = "SYADZZ PRIVATE SCRIPT"
+menuTitle.Text = "STEAL AN EGG MENU"
 menuTitle.TextColor3 = Color3.fromRGB(255, 217, 0)
 menuTitle.TextSize = 21
 menuTitle.Font = Enum.Font.GothamBold
@@ -131,15 +134,15 @@ menuTitle.Parent = menu
 
 local welcome = Instance.new("TextLabel")
 welcome.Size = UDim2.new(1, -30, 0, 35)
-welcome.Position = UDim2.new(0, 15, 0, 55)
+welcome.Position = UDim2.new(0, 15, 0, 45)
 welcome.BackgroundTransparency = 1
 welcome.Text = "✓ Successfully unlocked"
 welcome.TextColor3 = Color3.fromRGB(100, 255, 130)
-welcome.TextSize = 15
+welcome.TextSize = 14
 welcome.Font = Enum.Font.GothamBold
 welcome.Parent = menu
 
--- Contoh tombol menu
+-- Tombol Menu
 local function createButton(text, y)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(1, -40, 0, 45)
@@ -159,17 +162,74 @@ local function createButton(text, y)
     return button
 end
 
-local button1 = createButton("⚡ OPTION 1", 105)
-local button2 = createButton("🔥 OPTION 2", 160)
-local button3 = createButton("⚙ SETTINGS", 215)
+local button1 = createButton("⚡ AUTO STEAL: OFF", 95)
+local button2 = createButton("🔥 TELEPORT TO EGG", 155)
+local button3 = createButton("⚙ CLOSE GUI", 215)
 
 --==================================================
--- UNLOCK
+-- LOGIKA FITUR (STEAL AN EGG)
+--==================================================
+
+-- Loop Auto Steal Egg
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if autoStealActive then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    fireproximityprompt(obj)
+                end
+            end
+        end
+    end
+end)
+
+-- Tombol 1: Toggle Auto Steal
+button1.MouseButton1Click:Connect(function()
+    autoStealActive = not autoStealActive
+    if autoStealActive then
+        button1.Text = "⚡ AUTO STEAL: ON"
+        button1.BackgroundColor3 = Color3.fromRGB(45, 180, 80)
+    else
+        button1.Text = "⚡ AUTO STEAL: OFF"
+        button1.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    end
+end)
+
+-- Tombol 2: Teleport ke Telur Terdekat
+button2.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local nearestPrompt = nil
+        local shortestDistance = math.huge
+        
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent:IsA("BasePart") then
+                local dist = (char.HumanoidRootPart.Position - obj.Parent.Position).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    nearestPrompt = obj.Parent
+                end
+            end
+        end
+
+        if nearestPrompt then
+            char.HumanoidRootPart.CFrame = nearestPrompt.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+end)
+
+-- Tombol 3: Tutup/Buka GUI
+button3.MouseButton1Click:Connect(function()
+    menu.Visible = false
+end)
+
+--==================================================
+-- UNLOCK / PASSWORD CHECK
 --==================================================
 
 local function checkPassword()
     if textbox.Text == PASSWORD then
-
         status.Text = "✓ Correct password"
         status.TextColor3 = Color3.fromRGB(100, 255, 130)
 
@@ -177,9 +237,7 @@ local function checkPassword()
 
         main.Visible = false
         menu.Visible = true
-
     else
-
         status.Text = "✕ Wrong password"
         status.TextColor3 = Color3.fromRGB(255, 80, 80)
 
