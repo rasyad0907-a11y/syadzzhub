@@ -1,4 +1,4 @@
---// SYADZZ HUB - FULL ACCURATE SCRIPT WITH CUSTOM SYADHOLICC LOGO
+--// SYADZZ HUB - FIXED UI BLANK / MISSING ELEMENTS & COMPLETED CODE
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -25,11 +25,13 @@ if not success or not Rayfield then
     Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 end
 
--- ASSET ID LOGO SYADHOLICC
-local customLogoId = "rbxassetid://87188655335018"
+-- ASSET ID UNTUK LOGO
+local logoAssetId = "rbxthumb://type=Asset&id=87188655335018&w=420&h=420"
 
+-- 3. CREATE WINDOW WITH LOGO ICON
 local Window = Rayfield:CreateWindow({
     Name = "SYADZZ HUB | Steal an Egg 🥚",
+    Icon = logoAssetId, -- Menampilkan gambar logo di samping nama Syadzz Hub
     LoadingTitle = "SYADZZ HUB Loading...",
     LoadingSubtitle = "by Syadzz & Syadholicc",
     ConfigurationSaving = { Enabled = false },
@@ -45,7 +47,7 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- SETTINGS CONFIGURATION (SEMUA DEFAULT OFF)
+-- SETTINGS CONFIGURATION (DEFAULT OFF)
 local Settings = {
     TeleportSteal = false,
     AutoSteal = false,
@@ -75,7 +77,7 @@ local Settings = {
     MinEggKG = "0"
 }
 
--- RARITY WEIGHTS (URUTAN KUALITAS TELUR)
+-- RARITY WEIGHTS
 local RarityWeight = {
     ["Divine"] = 10,
     ["Eternal"] = 9,
@@ -90,7 +92,6 @@ local RarityWeight = {
 }
 
 -- HELPER FUNCTIONS
-
 local function getEggRarityNameAndWeight(eggObj)
     if not eggObj then return "Uncommon", 1 end
     
@@ -176,20 +177,12 @@ local function getMySafeZoneCFrame()
     return LocalPlayer.Character and LocalPlayer.Character.HumanoidRootPart.CFrame
 end
 
--- TABS
+-- CREATING TABS
 local StealTab = Window:CreateTab("Steal", 4483362458)
 local FilterTab = Window:CreateTab("Filter Tools", 4483362458)
 local ProfileTab = Window:CreateTab("SYADHOLICC", 4483362458)
 
--- PROFILE TAB DENGAN LOGO CUSTOM SYADHOLICC
-ProfileTab:CreateSection("SYADHOLICC Official Logo")
-ProfileTab:CreateLabel("Owner: SYADHOLICC")
-ProfileTab:CreateImage({
-    Name = "SYADHOLICC Logo",
-    Image = customLogoId
-})
-
--- STEAL TAB UI
+-- 1. STEAL TAB UI
 StealTab:CreateToggle({
     Name = "Teleport Steal",
     CurrentValue = false,
@@ -243,7 +236,7 @@ StealTab:CreateSlider({
     Callback = function(Value) Settings.StealSpeed = Value end,
 })
 
--- FILTER TAB UI
+-- 2. FILTER TAB UI
 FilterTab:CreateDropdown({
     Name = "Pet Names",
     Options = {"All (none)", "Custom"},
@@ -269,7 +262,17 @@ for _, rarity in ipairs(rarities) do
     })
 end
 
--- LOGIKA AUTO STEAL (PRESISI AREA, RARITY & TELEPORT TO ZONA AMAN)
+-- 3. PROFILE TAB UI
+ProfileTab:CreateSection("SYADHOLICC Official Logo")
+ProfileTab:CreateLabel("Owner: SYADHOLICC")
+pcall(function()
+    ProfileTab:CreateImage({
+        Name = "SYADHOLICC Logo",
+        Image = logoAssetId
+    })
+end)
+
+-- LOGIKA AUTO STEAL
 task.spawn(function()
     while task.wait(0.12) do
         if Settings.AutoSteal or Settings.TeleportSteal then
@@ -367,7 +370,7 @@ task.spawn(function()
     end
 end)
 
--- LOGIKA AUTO TREADMILL (STRICT KHUSUS PLOT SENDIRI)
+-- LOGIKA AUTO TREADMILL
 task.spawn(function()
     while task.wait(0.15) do
         if Settings.AutoTreadmill then
@@ -378,7 +381,6 @@ task.spawn(function()
                 local myPlot = getMyPlotStrict()
                 local targetTreadmill = nil
 
-                -- HANYA MENCARI DI DALAM PLOT SENDIRI
                 if myPlot then
                     for _, obj in pairs(myPlot:GetDescendants()) do
                         local oName = obj.Name:lower()
@@ -389,32 +391,73 @@ task.spawn(function()
                     end
                 end
 
-                -- Kunci Posisi di Atas Treadmill Plot Sendiri
                 if targetTreadmill then
                     local treadmillCFrame = targetTreadmill.CFrame
                     local positionAbove = treadmillCFrame.Position + Vector3.new(0, 2.8, 0)
                     
                     char.HumanoidRootPart.CFrame = CFrame.new(positionAbove, positionAbove + treadmillCFrame.LookVector)
-                    char.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+                    char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                 end
             end)
         end
     end
 end)
 
--- GODMODE LOGIC
+-- LOGIKA AUTO PLACE TO PEN
+task.spawn(function()
+    while task.wait(0.5) do
+        if Settings.AutoPlace then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if not char then return end
+                
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool and tool.Name:lower():find("egg") then
+                    local myPlot = getMyPlotStrict()
+                    if myPlot then
+                        for _, obj in pairs(myPlot:GetDescendants()) do
+                            if obj:IsA("ProximityPrompt") and (obj.ActionText:lower():find("place") or obj.ObjectText:lower():find("pen")) then
+                                fireproximityprompt(obj)
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- LOGIKA GODMODE & ANTI RAGDOLL
 RunService.Stepped:Connect(function()
     if Settings.Godmode then
         pcall(function()
             local char = LocalPlayer.Character
             if char then
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    if hum.PlatformStand then hum.PlatformStand = false end
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    -- Anti Ragdoll & Anti Knockdown
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    if humanoid:GetState() == Enum.HumanoidStateType.Ragdoll or humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
+                        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                    end
+                end
+
+                -- Hilangkan efek hit/push pada BasePart
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
                 end
             end
         end)
     end
 end)
+
+Rayfield:Notify({
+    Title = "SYADZZ HUB",
+    Content = "Script successfully loaded!",
+    Duration = 5,
+    Image = logoAssetId
+})
