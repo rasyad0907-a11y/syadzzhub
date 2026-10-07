@@ -1,5 +1,5 @@
---// SYADZZ HUB (Nasi Rendang Style Remake)
---// Menggunakan Rayfield UI Library
+--// SYADZZ HUB (Rayfield UI Library Edition)
+--// Menggunakan UI Library Modern + Anti Lag + Full Feature
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -37,24 +37,40 @@ local Settings = {
 }
 
 -- HELPER FUNCTIONS
-local function checkEggRarity(eggModel)
-    if not eggModel then return false end
+local function isRealEggPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
     
-    -- Cek atribut atau tag rarity dari nama/anak objek
-    local eggName = eggModel.Name:lower()
-    for rarity, enabled in pairs(Settings.SelectedRarities) do
-        if enabled and eggName:find(rarity:lower()) then
-            return true
-        end
+    local parent = prompt.Parent
+    local parentName = parent and parent.Name:lower() or ""
+    local grandParentName = (parent and parent.Parent) and parent.Parent.Name:lower() or ""
+    local objectText = prompt.ObjectText:lower()
+    local actionText = prompt.ActionText:lower()
+
+    -- BLOKIR: Event, Quest, Machine, Wisp, Chest, Daily, Shop
+    if parentName:find("wisp") or parentName:find("machine") or parentName:find("quest") or 
+       parentName:find("chest") or parentName:find("free") or parentName:find("gratis") or 
+       grandParentName:find("wisp") or grandParentName:find("machine") or grandParentName:find("quest") then
+        return false
     end
-    return true -- Default allow jika tidak terfilter
+    
+    if objectText:find("wisp") or objectText:find("quest") or objectText:find("machine") or 
+       actionText:find("claim") or actionText:find("open") or actionText:find("buka") then
+        return false
+    end
+
+    -- TERIMA: Hanya jika ada kata Egg / Steal
+    if parentName:find("egg") or objectText:find("egg") or actionText:find("steal") or actionText:find("curi") or actionText:find("take") then
+        return true
+    end
+
+    return false
 end
 
 -- TABS
 local StealTab = Window:CreateTab("Steal", 4483362458)
 local FilterTab = Window:CreateTab("Filter Tools", 4483362458)
 
--- STEAL TAB TOGGLES
+-- STEAL TAB
 StealTab:CreateToggle({
    Name = "Auto Steal Eggs",
    CurrentValue = false,
@@ -73,7 +89,7 @@ StealTab:CreateToggle({
 
 StealTab:CreateDropdown({
    Name = "Steal Method",
-   Options = {"Teleport","Glide","Instant"},
+   Options = {"Teleport","Instant"},
    CurrentOption = {"Teleport"},
    MultipleOptions = false,
    Callback = function(Option)
@@ -81,7 +97,35 @@ StealTab:CreateDropdown({
    end,
 })
 
--- FILTER TAB CHECKBOXES
+StealTab:CreateButton({
+   Name = "Teleport to Nearest Egg",
+   Callback = function()
+      local char = LocalPlayer.Character
+      if char and char:FindFirstChild("HumanoidRootPart") then
+          local targetCFrame = nil
+          local shortestDistance = math.huge
+
+          for _, obj in pairs(Workspace:GetDescendants()) do
+              if isRealEggPrompt(obj) and obj.Parent then
+                  local part = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart", true)
+                  if part then
+                      local dist = (char.HumanoidRootPart.Position - part.Position).Magnitude
+                      if dist > 5 and dist < shortestDistance then
+                          shortestDistance = dist
+                          targetCFrame = part.CFrame
+                      end
+                  end
+              end
+          end
+
+          if targetCFrame then
+              char.HumanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 3, 0)
+          end
+      end
+   end,
+})
+
+-- FILTER TAB
 FilterTab:CreateToggle({
    Name = "Filter: Divine",
    CurrentValue = true,
@@ -109,15 +153,11 @@ task.spawn(function()
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
                 for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") and obj.Parent then
-                        local parent = obj.Parent
-                        -- Filter hanya telur & bukan mesin/event/wisp
-                        if parent.Name:lower():find("egg") and checkEggRarity(parent) then
-                            if Settings.StealMethod == "Teleport" then
-                                char.HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 2, 0)
-                            end
-                            fireproximityprompt(obj)
+                    if isRealEggPrompt(obj) then
+                        if Settings.StealMethod == "Teleport" and obj.Parent and obj.Parent:IsA("BasePart") then
+                            char.HumanoidRootPart.CFrame = obj.Parent.CFrame + Vector3.new(0, 2, 0)
                         end
+                        fireproximityprompt(obj)
                     end
                 end
             end)
@@ -125,18 +165,16 @@ task.spawn(function()
     end
 end)
 
--- Auto Place ke Pen (Disesuaikan posisi kandang sendiri)
+-- Auto Place ke Pen
 task.spawn(function()
     while task.wait(1) do
         if Settings.AutoPlace then
             pcall(function()
-                -- Mengirim remote penempatan ke server jika memegang telur
                 local myPlot = Workspace:FindFirstChild("Plots") and Workspace.Plots:FindFirstChild(LocalPlayer.Name)
                 if myPlot and myPlot:FindFirstChild("Pen") then
                     local penCFrame = myPlot.Pen.CFrame
                     local char = LocalPlayer.Character
                     if char and char:FindFirstChildOfClass("Tool") then
-                        -- Teleport presisi tepat di dalam zona Pen milik sendiri agar tidak gagal
                         char.HumanoidRootPart.CFrame = penCFrame + Vector3.new(0, 3, 0)
                     end
                 end
