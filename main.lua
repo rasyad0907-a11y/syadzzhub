@@ -1,9 +1,7 @@
---// SYADZZ HUB - FIXED UI BLANK / MISSING ELEMENTS & ENHANCED ARCHITECTURE
-
+--// SYADZZ HUB - FIXED UI BLANK / MISSING ELEMENTS & COMPLETED CODE
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 -- 1. CLEANUP GUI LAMA JIKA MASIH ADA
@@ -21,7 +19,6 @@ local Rayfield
 local success, err = pcall(function()
     Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
-
 if not success or not Rayfield then
     Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 end
@@ -48,7 +45,7 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- SETTINGS CONFIGURATION
+-- SETTINGS CONFIGURATION (DEFAULT OFF)
 local Settings = {
     TeleportSteal = false,
     AutoSteal = false,
@@ -58,7 +55,6 @@ local Settings = {
     AutoTreadmill = false,
     StealMethod = "Glide",
     StealSpeed = 100,
-
     PetNames = "All (none)",
     SelectedArea = "All (none)",
     Rarities = {
@@ -92,47 +88,78 @@ local RarityWeight = {
     ["Uncommon"] = 1
 }
 
-local ValidAreas = {
-    "Enchanted Forest", "Light Dark", "Titan Temple", "Cherry Blossom", 
-    "Cosmic", "Prehistoric", "Abyss Ocean", "Volcano", "Snow", "Jungle", "Desert", "Lake"
-}
+-- HELPER FUNCTIONS
+local function getEggRarityNameAndWeight(eggObj)
+    if not eggObj then return "Uncommon", 1 end
+    local fullText = ""
+    local curr = eggObj
+    for i = 1, 4 do
+        if curr then
+            fullText = fullText .. " " .. curr.Name:lower()
+            curr = curr.Parent
+        end
+    end
+    if eggObj:FindFirstChild("Rarity") then
+        fullText = fullText .. " " .. tostring(eggObj.Rarity.Value):lower()
+    end
+    for rarity, weight in pairs(RarityWeight) do
+        if fullText:find(rarity:lower()) then
+            return rarity, weight
+        end
+    end
+    return "Uncommon", 1
+end
 
---------------------------------------------------------------------------------
--- HELPER FUNCTIONS & MODULAR LOGIC
---------------------------------------------------------------------------------
+local function isRealEggPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
+    local parent = prompt.Parent
+    local parentName = parent and parent.Name:lower() or ""
+    local grandParentName = (parent and parent.Parent) and parent.Parent.Name:lower() or ""
+    local objectText = prompt.ObjectText:lower()
+    local actionText = prompt.ActionText:lower()
 
+    if parentName:find("wisp") or parentName:find("machine") or parentName:find("quest") or parentName:find("chest") or parentName:find("free") or parentName:find("gratis") or grandParentName:find("wisp") or grandParentName:find("machine") or grandParentName:find("quest") then
+        return false
+    end
+    if objectText:find("wisp") or objectText:find("quest") or objectText:find("machine") or actionText:find("claim") or actionText:find("open") or actionText:find("buka") then
+        return false
+    end
+    if parentName:find("egg") or objectText:find("egg") or actionText:find("steal") or actionText:find("curi") or actionText:find("take") then
+        return true
+    end
+    return false
+end
+
+-- DETEKSI PLOT KHUSUS MILIK SENDIRI (DIPERKUAT)
 local function getMyPlotStrict()
-    local plotsFolder = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("PlotsFolder")
-    if not plotsFolder then return nil end
-
-    for _, plot in pairs(plotsFolder:GetChildren()) do
-        local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("OwnerValue")
-        if ownerVal then
-            if ownerVal:IsA("ObjectValue") and ownerVal.Value == LocalPlayer then
-                return plot
-            elseif ownerVal:IsA("StringValue") and (ownerVal.Value == LocalPlayer.Name or ownerVal.Value == LocalPlayer.DisplayName) then
-                return plot
-            elseif ownerVal:IsA("IntValue") or ownerVal:IsA("NumberValue") then
-                if ownerVal.Value == LocalPlayer.UserId then
+    local possibleFolders = {"Plots", "Bases", "PlotsFolder", "PlotFolder", "PlayerPlots", "Base", "Plot"}
+    for _, folderName in ipairs(possibleFolders) do
+        local plotsFolder = Workspace:FindFirstChild(folderName)
+        if plotsFolder then
+            for _, plot in pairs(plotsFolder:GetChildren()) do
+                if plot.Name == LocalPlayer.Name or plot.Name:lower():find(LocalPlayer.Name:lower()) then
+                    return plot
+                end
+                local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("OwnerValue") or plot:FindFirstChild("UserId")
+                if ownerVal and (tostring(ownerVal.Value) == LocalPlayer.Name or ownerVal.Value == LocalPlayer or tostring(ownerVal.Value) == tostring(LocalPlayer.UserId)) then
+                    return plot
+                end
+                if plot:GetAttribute("Owner") == LocalPlayer.Name or plot:GetAttribute("Owner") == LocalPlayer.UserId or plot:GetAttribute("Player") == LocalPlayer.Name then
                     return plot
                 end
             end
         end
-
-        local attrOwner = plot:GetAttribute("Owner") or plot:GetAttribute("OwnerUserId") or plot:GetAttribute("Player")
-        if attrOwner then
-            if tostring(attrOwner) == LocalPlayer.Name or attrOwner == LocalPlayer.UserId then
-                return plot
-            end
-        end
-
-        if plot.Name == LocalPlayer.Name or plot.Name == "Plot_" .. LocalPlayer.Name or plot.Name == tostring(LocalPlayer.UserId) then
-            return plot
+    end
+    -- Fallback: Cari model apapun di workspace yang namanya mengandung nama player
+    for _, obj in pairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and (obj.Name == LocalPlayer.Name or obj.Name:lower():find(LocalPlayer.Name:lower())) then
+            return obj
         end
     end
     return nil
 end
 
+-- DETEKSI ZONA AMAN BASE SENDIRI
 local function getMySafeZoneCFrame()
     local myPlot = getMyPlotStrict()
     if myPlot then
@@ -147,246 +174,221 @@ local function getMySafeZoneCFrame()
         end
         return myPlot:GetPivot() + Vector3.new(0, 3, 0)
     end
-    
-    local char = LocalPlayer.Character
-    return char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart.CFrame
+    return LocalPlayer.Character and LocalPlayer.Character.HumanoidRootPart.CFrame
 end
 
-local function getEggArea(eggObj)
-    if not eggObj then return "Unknown" end
-
-    local areaAttr = eggObj:GetAttribute("Area") or eggObj:GetAttribute("Zone") or eggObj:GetAttribute("Region")
-    if areaAttr then return tostring(areaAttr) end
-
-    local areaVal = eggObj:FindFirstChild("Area") or eggObj:FindFirstChild("Zone") or eggObj:FindFirstChild("Region")
-    if areaVal and areaVal:IsA("ValueBase") then
-        return tostring(areaVal.Value)
-    end
-
-    local curr = eggObj
-    while curr and curr ~= Workspace do
-        local currNameLower = curr.Name:lower()
-        for _, areaName in ipairs(ValidAreas) do
-            if currNameLower:find(areaName:lower(), 1, true) then
-                return areaName
-            end
-        end
-        
-        local parentAttr = curr:GetAttribute("Area") or curr:GetAttribute("Zone")
-        if parentAttr then return tostring(parentAttr) end
-        
-        curr = curr.Parent
-    end
-
-    return "Unknown"
-end
-
-local function getEggRarityNameAndWeight(eggObj)
-    if not eggObj then return "Uncommon", 1 end
-
-    local rarityAttr = eggObj:GetAttribute("Rarity")
-    if rarityAttr then
-        local rStr = tostring(rarityAttr)
-        for rarity, weight in pairs(RarityWeight) do
-            if rStr:lower() == rarity:lower() then return rarity, weight end
-        end
-    end
-
-    if eggObj:FindFirstChild("Rarity") and eggObj.Rarity:IsA("ValueBase") then
-        local rStr = tostring(eggObj.Rarity.Value)
-        for rarity, weight in pairs(RarityWeight) do
-            if rStr:lower() == rarity:lower() then return rarity, weight end
-        end
-    end
-
-    local fullText = eggObj.Name:lower()
-    if eggObj.Parent then fullText = fullText .. " " .. eggObj.Parent.Name:lower() end
-
-    for rarity, weight in pairs(RarityWeight) do
-        if fullText:find(rarity:lower(), 1, true) then
-            return rarity, weight
-        end
-    end
-
-    return "Uncommon", 1
-end
-
-local function isValidEggPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
-    
-    local parent = prompt.Parent
-    if not parent then return false end
-    
-    local parentName = parent.Name:lower()
-    local objectText = prompt.ObjectText:lower()
-    local actionText = prompt.ActionText:lower()
-
-    if parentName:find("wisp") or parentName:find("machine") or parentName:find("quest") or 
-       parentName:find("chest") or parentName:find("free") or parentName:find("gratis") or
-       objectText:find("wisp") or objectText:find("quest") or actionText:find("claim") or actionText:find("buka") then
-        return false
-    end
-
-    if parentName:find("egg") or objectText:find("egg") or actionText:find("steal") or actionText:find("curi") or actionText:find("take") then
-        return true
-    end
-
-    return false
-end
-
-local function passesFilters(prompt, eggPart, eggModel)
-    if Settings.SelectedArea ~= "All (none)" and Settings.SelectedArea ~= "All" then
-        local eggArea = getEggArea(eggModel)
-        if eggArea:lower() ~= Settings.SelectedArea:lower() then
-            return false
-        end
-    end
-
-    local activeRarityFilters = {}
-    for rName, active in pairs(Settings.Rarities) do
-        if active then table.insert(activeRarityFilters, rName:lower()) end
-    end
-
-    if #activeRarityFilters > 0 then
-        local rName, _ = getEggRarityNameAndWeight(eggModel)
-        local matchRarity = false
-        for _, filterRarity in ipairs(activeRarityFilters) do
-            if rName:lower() == filterRarity or eggModel.Name:lower():find(filterRarity, 1, true) then
-                matchRarity = true
-                break
-            end
-        end
-        if not matchRarity then return false end
-    end
-
-    return true
-end
-
-local function getEggTargets()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return {} end
-    local hrpPos = char.HumanoidRootPart.Position
-
-    local targets = {}
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if isValidEggPrompt(obj) then
-            local eggModel = obj.Parent
-            local eggPart = eggModel:IsA("BasePart") and eggModel or eggModel:FindFirstChildWhichIsA("BasePart", true)
-            
-            if eggPart and passesFilters(obj, eggPart, eggModel) then
-                local _, rWeight = getEggRarityNameAndWeight(eggModel)
-                local dist = (hrpPos - eggPart.Position).Magnitude
-                
-                table.insert(targets, {
-                    prompt = obj,
-                    part = eggPart,
-                    model = eggModel,
-                    weight = rWeight,
-                    dist = dist
-                })
-            end
-        end
-    end
-
-    return targets
-end
-
-local function sortTargets(targets)
-    table.sort(targets, function(a, b)
-        if Settings.Priority == "Distance" then
-            if math.abs(a.dist - b.dist) > 2 then
-                return a.dist < b.dist
-            end
-            return a.weight > b.weight
-        else
-            if a.weight ~= b.weight then
-                return a.weight > b.weight
-            end
-            return a.dist < b.dist
-        end
-    end)
-end
-
---------------------------------------------------------------------------------
--- UI CREATION
---------------------------------------------------------------------------------
-
+-- CREATING TABS
 local StealTab = Window:CreateTab("Steal", 4483362458)
 local FilterTab = Window:CreateTab("Filter Tools", 4483362458)
 local ProfileTab = Window:CreateTab("SYADHOLICC", 4483362458)
 
-StealTab:CreateToggle({ Name = "Teleport Steal", CurrentValue = false, Callback = function(Value) Settings.TeleportSteal = Value end })
-StealTab:CreateToggle({ Name = "Auto Steal Eggs", CurrentValue = false, Callback = function(Value) Settings.AutoSteal = Value end })
-StealTab:CreateToggle({ Name = "Real Godmode (Aura Bat, Anti Ragdoll)", CurrentValue = false, Callback = function(Value) Settings.Godmode = Value end })
-StealTab:CreateToggle({ Name = "Auto Place to Pen", CurrentValue = false, Callback = function(Value) Settings.AutoPlace = Value end })
-StealTab:CreateToggle({ Name = "Anti Hit Guard", CurrentValue = false, Callback = function(Value) Settings.AntiHitGuard = Value end })
-StealTab:CreateToggle({ Name = "Auto Treadmill (Plot Sendiri Only)", CurrentValue = false, Callback = function(Value) Settings.AutoTreadmill = Value end })
+-- 1. STEAL TAB UI
+StealTab:CreateToggle({
+    Name = "Teleport Steal",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.TeleportSteal = Value
+    end,
+})
 
-StealTab:CreateDropdown({ Name = "Steal Method", Options = {"Glide", "Teleport", "Instant"}, CurrentOption = {"Glide"}, MultipleOptions = false, Callback = function(Option) Settings.StealMethod = Option[1] end })
-StealTab:CreateDropdown({ Name = "Priority", Options = {"Rarity", "Distance"}, CurrentOption = {"Rarity"}, MultipleOptions = false, Callback = function(Option) Settings.Priority = Option[1] end })
-StealTab:CreateSlider({ Name = "Auto Steal Speed", Range = {1, 100}, Increment = 1, Suffix = "%", CurrentValue = 100, Callback = function(Value) Settings.StealSpeed = Value end })
+StealTab:CreateToggle({
+    Name = "Auto Steal Eggs",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AutoSteal = Value
+    end,
+})
 
-FilterTab:CreateDropdown({ Name = "Pet Names", Options = {"All (none)", "Custom"}, CurrentOption = {"All (none)"}, MultipleOptions = false, Callback = function(Option) Settings.PetNames = Option[1] end })
-FilterTab:CreateDropdown({ Name = "Areas", Options = {"All (none)", "Enchanted Forest", "Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Volcano", "Snow", "Jungle", "Desert", "Lake"}, CurrentOption = {"All (none)"}, MultipleOptions = false, Callback = function(Option) Settings.SelectedArea = Option[1] end })
+StealTab:CreateToggle({
+    Name = "Real Godmode (Aura Bat, Anti Ragdoll)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.Godmode = Value
+    end,
+})
 
-for _, rarity in ipairs({"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare", "SuperRare", "Uncommon"}) do
-    FilterTab:CreateToggle({ Name = "Filter: " .. rarity, CurrentValue = false, Callback = function(Value) Settings.Rarities[rarity] = Value end })
+StealTab:CreateToggle({
+    Name = "Auto Place to Pen",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AutoPlace = Value
+    end,
+})
+
+StealTab:CreateToggle({
+    Name = "Anti Hit Guard",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AntiHitGuard = Value
+    end,
+})
+
+StealTab:CreateToggle({
+    Name = "Auto Treadmill (Plot Sendiri Only)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AutoTreadmill = Value
+    end,
+})
+
+StealTab:CreateDropdown({
+    Name = "Steal Method",
+    Options = {"Glide", "Teleport", "Instant"},
+    CurrentOption = {"Glide"},
+    MultipleOptions = false,
+    Callback = function(Option)
+        Settings.StealMethod = Option[1]
+    end,
+})
+
+StealTab:CreateSlider({
+    Name = "Auto Steal Speed",
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = "%",
+    CurrentValue = 100,
+    Callback = function(Value)
+        Settings.StealSpeed = Value
+    end,
+})
+
+-- 2. FILTER TAB UI
+FilterTab:CreateDropdown({
+    Name = "Pet Names",
+    Options = {"All (none)", "Custom"},
+    CurrentOption = {"All (none)"},
+    MultipleOptions = false,
+    Callback = function(Option)
+        Settings.PetNames = Option[1]
+    end,
+})
+
+FilterTab:CreateDropdown({
+    Name = "Areas",
+    Options = {"All (none)", "Enchanted Forest", "Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Volcano", "Snow", "Jungle", "Desert", "Lake"},
+    CurrentOption = {"All (none)"},
+    MultipleOptions = false,
+    Callback = function(Option)
+        Settings.SelectedArea = Option[1]
+    end,
+})
+
+local rarities = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare", "SuperRare", "Uncommon"}
+for _, rarity in ipairs(rarities) do
+    FilterTab:CreateToggle({
+        Name = "Filter: " .. rarity,
+        CurrentValue = false,
+        Callback = function(Value)
+            Settings.Rarities[rarity] = Value
+        end,
+    })
 end
 
+-- 3. PROFILE TAB UI
 ProfileTab:CreateSection("SYADHOLICC Official Logo")
 ProfileTab:CreateLabel("Owner: SYADHOLICC")
-pcall(function() ProfileTab:CreateImage({ Name = "SYADHOLICC Logo", Image = logoAssetId }) end)
+pcall(function()
+    ProfileTab:CreateImage({
+        Name = "SYADHOLICC Logo",
+        Image = logoAssetId
+    })
+end)
 
---------------------------------------------------------------------------------
--- LOOPS & EXECUTION
---------------------------------------------------------------------------------
-
+-- LOGIKA AUTO STEAL (DIPERBAIKI UNTUK AREA FILTER & PENCARIAN MENYELURUH)
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.12) do
         if Settings.AutoSteal or Settings.TeleportSteal then
             pcall(function()
                 local char = LocalPlayer.Character
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-                local hrp = char.HumanoidRootPart
-
-                local targets = getEggTargets()
-                if #targets == 0 then return end
-
-                sortTargets(targets)
-                local target = targets[1]
-                local safeZoneCFrame = getMySafeZoneCFrame()
-
-                if Settings.AntiHitGuard then
-                    for _, p in pairs(char:GetChildren()) do
-                        if p:IsA("BasePart") then p.CanTouch = false end
+                
+                local targets = {}
+                local activeRarityFilters = {}
+                for rName, active in pairs(Settings.Rarities) do
+                    if active then
+                        table.insert(activeRarityFilters, rName:lower())
                     end
                 end
 
-                local targetCFrame = target.part.CFrame * CFrame.new(0, 2.5, 0)
-                if Settings.StealMethod == "Instant" or Settings.StealMethod == "Teleport" then
-                    hrp.CFrame = targetCFrame
-                else
-                    local speedFactor = math.clamp(Settings.StealSpeed / 100, 0.1, 1)
-                    local dist = (hrp.Position - targetCFrame.Position).Magnitude
-                    local duration = math.clamp(dist / (50 * speedFactor), 0.1, 3)
-                    
-                    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
-                    tween:Play()
-                    tween.Completed:Wait()
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if isRealEggPrompt(obj) then
+                        local eggModel = obj.Parent
+                        local eggPart = eggModel:IsA("BasePart") and eggModel or eggModel:FindFirstChildWhichIsA("BasePart", true)
+                        
+                        if eggPart then
+                            local rName, rWeight = getEggRarityNameAndWeight(eggModel)
+                            
+                            -- Area Check (DIPERBAIKI LEBIH FLEKSIBEL)
+                            local areaMatch = true
+                            if Settings.SelectedArea ~= "All (none)" and Settings.SelectedArea ~= "All" then
+                                local targetAreaRaw = Settings.SelectedArea:lower()
+                                local targetAreaClean = targetAreaRaw:gsub("%s+", "")
+                                
+                                local fullParentHierarchy = ""
+                                local parentTracker = eggModel
+                                for i = 1, 6 do
+                                    if parentTracker then
+                                        fullParentHierarchy = fullParentHierarchy .. " " .. parentTracker.Name:lower()
+                                        parentTracker = parentTracker.Parent
+                                    end
+                                end
+                                local cleanHierarchy = fullParentHierarchy:gsub("%s+", "")
+                                
+                                if not cleanHierarchy:find(targetAreaClean) and not fullParentHierarchy:find(targetAreaRaw) then
+                                    areaMatch = false
+                                end
+                            end
+
+                            -- Rarity Check
+                            local rarityMatch = false
+                            if #activeRarityFilters == 0 then
+                                rarityMatch = true
+                            else
+                                for _, filterName in ipairs(activeRarityFilters) do
+                                    if rName:lower():find(filterName) or eggModel.Name:lower():find(filterName) then
+                                        rarityMatch = true
+                                        break
+                                    end
+                                end
+                            end
+
+                            if areaMatch and rarityMatch then
+                                table.insert(targets, {
+                                    prompt = obj,
+                                    part = eggPart,
+                                    weight = rWeight,
+                                    dist = (char.HumanoidRootPart.Position - eggPart.Position).Magnitude
+                                })
+                            end
+                        end
+                    end
                 end
 
-                task.wait(0.05)
-                target.prompt.RequiresLineOfSight = false
-                fireproximityprompt(target.prompt)
-                task.wait(0.1)
+                -- Prioritaskan Berdasarkan Rarity/Bobot Tertinggi, lalu Jarak
+                table.sort(targets, function(a, b)
+                    if a.weight ~= b.weight then
+                        return a.weight > b.weight
+                    end
+                    return a.dist < b.dist
+                end)
 
-                if safeZoneCFrame then
-                    hrp.CFrame = safeZoneCFrame
-                end
+                if #targets > 0 then
+                    local target = targets[1]
+                    local safeZoneCFrame = getMySafeZoneCFrame()
 
-                if Settings.AntiHitGuard then
-                    for _, p in pairs(char:GetChildren()) do
-                        if p:IsA("BasePart") then p.CanTouch = true end
+                    -- Teleport ke lokasi telur
+                    char.HumanoidRootPart.CFrame = target.part.CFrame * CFrame.new(0, 2.5, 0)
+                    task.wait(0.08)
+
+                    -- Trigger Pengambilan Telur
+                    target.prompt.RequiresLineOfSight = false
+                    fireproximityprompt(target.prompt)
+                    task.wait(0.12)
+
+                    -- Berpindah Balik ke Zona Aman
+                    if safeZoneCFrame then
+                        char.HumanoidRootPart.CFrame = safeZoneCFrame
+                        task.wait(0.15)
                     end
                 end
             end)
@@ -394,60 +396,73 @@ task.spawn(function()
     end
 end)
 
-local function findMyTreadmill()
-    local myPlot = getMyPlotStrict()
-    if not myPlot then return nil end
-
-    for _, obj in pairs(myPlot:GetDescendants()) do
-        local oName = obj.Name:lower()
-        if oName:find("treadmill") or oName:find("trainer") or oName:find("tread") then
-            return obj
-        end
-    end
-    return nil
-end
-
-local function activateTreadmill(treadmillObj)
-    if not treadmillObj then return end
-    local prompt = treadmillObj:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt then fireproximityprompt(prompt) return end
-
-    local cd = treadmillObj:FindFirstChildWhichIsA("ClickDetector", true)
-    if cd then fireclickdetector(cd) return end
-
-    local part = treadmillObj:IsA("BasePart") and treadmillObj or treadmillObj:FindFirstChildWhichIsA("BasePart", true)
-    local char = LocalPlayer.Character
-    if part and char and char:FindFirstChild("HumanoidRootPart") then
-        local pos = part.CFrame.Position + Vector3.new(0, 2.8, 0)
-        char.HumanoidRootPart.CFrame = CFrame.new(pos, pos + part.CFrame.LookVector)
-        char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-    end
-end
-
+-- LOGIKA AUTO TREADMILL (DIPERBAIKI AGAR TELEPORT & BERJALAN SEMPURNA)
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.15) do
         if Settings.AutoTreadmill then
             pcall(function()
-                local treadmill = findMyTreadmill()
-                if treadmill then activateTreadmill(treadmill) end
+                local char = LocalPlayer.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+                local myPlot = getMyPlotStrict()
+                local targetTreadmill = nil
+
+                if myPlot then
+                    for _, obj in pairs(myPlot:GetDescendants()) do
+                        local oName = obj.Name:lower()
+                        if oName:find("treadmill") or oName:find("trainer") or oName:find("tread") or oName:find("gym") then
+                            targetTreadmill = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                            if targetTreadmill then break end
+                        end
+                    end
+                end
+
+                -- Fallback: Cari treadmill terdekat di workspace jika plot tidak terdeteksi
+                if not targetTreadmill then
+                    local shortestDist = math.huge
+                    for _, obj in pairs(Workspace:GetDescendants()) do
+                        local oName = obj.Name:lower()
+                        if oName:find("treadmill") or oName:find("trainer") or oName:find("tread") then
+                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                            if part then
+                                local dist = (char.HumanoidRootPart.Position - part.Position).Magnitude
+                                if dist < shortestDist then
+                                    shortestDist = dist
+                                    targetTreadmill = part
+                                end
+                            end
+                        end
+                    end
+                end
+
+                if targetTreadmill then
+                    local treadmillCFrame = targetTreadmill.CFrame
+                    local positionAbove = treadmillCFrame.Position + Vector3.new(0, 3, 0)
+                    char.HumanoidRootPart.CFrame = CFrame.new(positionAbove, positionAbove + treadmillCFrame.LookVector)
+                    char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                    end
+                end
             end)
         end
     end
 end)
 
+-- LOGIKA AUTO PLACE TO PEN
 task.spawn(function()
     while task.wait(0.5) do
         if Settings.AutoPlace then
             pcall(function()
                 local char = LocalPlayer.Character
                 if not char then return end
-
                 local tool = char:FindFirstChildOfClass("Tool")
                 if tool and tool.Name:lower():find("egg") then
                     local myPlot = getMyPlotStrict()
                     if myPlot then
                         for _, obj in pairs(myPlot:GetDescendants()) do
-                            if obj:IsA("ProximityPrompt") and (obj.ActionText:lower():find("place") or obj.ObjectText:lower():find("pen")) then
+                            if obj:IsA("ProximityPrompt") and (obj.ActionText:lower():find("place") or obj.ObjectText:lower():find("pen") or obj.ActionText:lower():find("taruh")) then
                                 fireproximityprompt(obj)
                                 break
                             end
@@ -459,6 +474,7 @@ task.spawn(function()
     end
 end)
 
+-- LOGIKA GODMODE & ANTI RAGDOLL
 RunService.Stepped:Connect(function()
     if Settings.Godmode then
         pcall(function()
@@ -472,6 +488,11 @@ RunService.Stepped:Connect(function()
                         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
                     end
                 end
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
             end
         end)
     end
@@ -479,7 +500,7 @@ end)
 
 Rayfield:Notify({
     Title = "SYADZZ HUB",
-    Content = "Script successfully loaded!",
+    Content = "Script successfully updated & loaded!",
     Duration = 5,
     Image = logoAssetId
 })
