@@ -10,14 +10,61 @@ local PASSWORD = "SYADZZ123"
 -- STATE FITUR
 local autoStealActive = false
 
+-- Fungsi untuk mengecek apakah prompt tersebut milik TELUR (bukan peti gratis/event)
+local function isEggPrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
+    
+    local parentName = prompt.Parent and prompt.Parent.Name:lower() or ""
+    local objectText = prompt.ObjectText:lower()
+    local actionText = prompt.ActionText:lower()
+
+    -- Filter: Jangan ambil jika berhubungan dengan peti, hadiah, chest, daily, atau event
+    if parentName:find("chest") or parentName:find("free") or parentName:find("gratis") or parentName:find("daily") or parentName:find("reward") then
+        return false
+    end
+    if objectText:find("gratis") or objectText:find("free") or objectText:find("reward") or actionText:find("claim") then
+        return false
+    end
+
+    -- Utamakan jika ada kata "egg" atau "steal"
+    if parentName:find("egg") or objectText:find("egg") or actionText:find("steal") or actionText:find("curi") or actionText:find("ambil") then
+        return true
+    end
+
+    return true
+end
+
 --==================================================
--- GUI
+-- GUI BASE
 --==================================================
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "SyadzzPrivateScript"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Tombol Pembuka (Open Button)
+local openBtn = Instance.new("TextButton")
+openBtn.Name = "OpenButton"
+openBtn.Size = UDim2.new(0, 50, 0, 50)
+openBtn.Position = UDim2.new(0, 15, 0.5, -25)
+openBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+openBtn.BorderSizePixel = 0
+openBtn.Text = "EGG"
+openBtn.TextColor3 = Color3.fromRGB(255, 217, 0)
+openBtn.TextSize = 14
+openBtn.Font = Enum.Font.GothamBold
+openBtn.Visible = false
+openBtn.Parent = gui
+
+local openCorner = Instance.new("UICorner")
+openCorner.CornerRadius = UDim.new(0, 12)
+openCorner.Parent = openBtn
+
+local openStroke = Instance.new("UIStroke")
+openStroke.Color = Color3.fromRGB(255, 217, 0)
+openStroke.Thickness = 2
+openStroke.Parent = openBtn
 
 -- Main password window
 local main = Instance.new("Frame")
@@ -92,7 +139,7 @@ local buttonCorner = Instance.new("UICorner")
 buttonCorner.CornerRadius = UDim.new(0, 8)
 buttonCorner.Parent = unlock
 
--- Status
+-- Status Label
 local status = Instance.new("TextLabel")
 status.Size = UDim2.new(1, 0, 0, 25)
 status.Position = UDim2.new(0, 0, 1, 5)
@@ -103,7 +150,7 @@ status.Font = Enum.Font.Gotham
 status.Parent = main
 
 --==================================================
--- MENU SETELAH PASSWORD BENAR
+-- MENU UTAMA (SETELAH UNLOCK)
 --==================================================
 
 local menu = Instance.new("Frame")
@@ -124,25 +171,56 @@ menuStroke.Thickness = 2
 menuStroke.Parent = menu
 
 local menuTitle = Instance.new("TextLabel")
-menuTitle.Size = UDim2.new(1, 0, 0, 55)
+menuTitle.Size = UDim2.new(1, -90, 0, 50)
+menuTitle.Position = UDim2.new(0, 15, 0, 0)
 menuTitle.BackgroundTransparency = 1
 menuTitle.Text = "STEAL AN EGG MENU"
 menuTitle.TextColor3 = Color3.fromRGB(255, 217, 0)
-menuTitle.TextSize = 21
+menuTitle.TextSize = 20
 menuTitle.Font = Enum.Font.GothamBold
+menuTitle.TextXAlignment = Enum.TextXAlignment.Left
 menuTitle.Parent = menu
 
-local welcome = Instance.new("TextLabel")
-welcome.Size = UDim2.new(1, -30, 0, 35)
-welcome.Position = UDim2.new(0, 15, 0, 45)
-welcome.BackgroundTransparency = 1
-welcome.Text = "✓ Successfully unlocked"
-welcome.TextColor3 = Color3.fromRGB(100, 255, 130)
-welcome.TextSize = 14
-welcome.Font = Enum.Font.GothamBold
-welcome.Parent = menu
+-- Container
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, 0, 1, -50)
+contentContainer.Position = UDim2.new(0, 0, 0, 50)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = menu
 
--- Tombol Menu
+-- Tombol Close (X)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -38, 0, 10)
+closeBtn.BackgroundColor3 = Color3.fromRGB(235, 60, 60)
+closeBtn.BorderSizePixel = 0
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 14
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = menu
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeBtn
+
+-- Tombol Minimize (-)
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0, 30, 0, 30)
+miniBtn.Position = UDim2.new(1, -74, 0, 10)
+miniBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+miniBtn.BorderSizePixel = 0
+miniBtn.Text = "-"
+miniBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+miniBtn.TextSize = 18
+miniBtn.Font = Enum.Font.GothamBold
+miniBtn.Parent = menu
+
+local miniCorner = Instance.new("UICorner")
+miniCorner.CornerRadius = UDim.new(0, 6)
+miniCorner.Parent = miniBtn
+
+-- Helper Pembuat Tombol
 local function createButton(text, y)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(1, -40, 0, 45)
@@ -153,7 +231,7 @@ local function createButton(text, y)
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.TextSize = 14
     button.Font = Enum.Font.GothamBold
-    button.Parent = menu
+    button.Parent = contentContainer
 
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 8)
@@ -162,21 +240,50 @@ local function createButton(text, y)
     return button
 end
 
-local button1 = createButton("⚡ AUTO STEAL: OFF", 95)
-local button2 = createButton("🔥 TELEPORT TO EGG", 155)
-local button3 = createButton("⚙ CLOSE GUI", 215)
+local button1 = createButton("⚡ AUTO STEAL: OFF", 35)
+local button2 = createButton("🔥 TELEPORT TO EGG", 95)
+local button3 = createButton("⚙ HIDE MENU", 155)
 
 --==================================================
--- LOGIKA FITUR (STEAL AN EGG)
+-- LOGIKA CLOSE, MINIMIZE & OPEN
 --==================================================
 
--- Loop Auto Steal Egg
+local isMinimized = false
+
+closeBtn.MouseButton1Click:Connect(function()
+    menu.Visible = false
+    openBtn.Visible = true
+end)
+
+miniBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        contentContainer.Visible = false
+        menu.Size = UDim2.new(0, 380, 0, 50)
+        miniBtn.Text = "+"
+    else
+        contentContainer.Visible = true
+        menu.Size = UDim2.new(0, 380, 0, 300)
+        miniBtn.Text = "-"
+    end
+end)
+
+openBtn.MouseButton1Click:Connect(function()
+    menu.Visible = true
+    openBtn.Visible = false
+end)
+
+--==================================================
+-- LOGIKA FITUR (DENGAN FILTER EGG SPESIFIK)
+--==================================================
+
+-- Loop Auto Steal Egg (Hanya menekan ProximityPrompt telur)
 task.spawn(function()
     while true do
         task.wait(0.1)
         if autoStealActive then
             for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") then
+                if isEggPrompt(obj) then
                     fireproximityprompt(obj)
                 end
             end
@@ -196,7 +303,7 @@ button1.MouseButton1Click:Connect(function()
     end
 end)
 
--- Tombol 2: Teleport ke Telur Terdekat
+-- Tombol 2: Teleport HANYA ke Telur Terdekat
 button2.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -204,7 +311,7 @@ button2.MouseButton1Click:Connect(function()
         local shortestDistance = math.huge
         
         for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent:IsA("BasePart") then
+            if isEggPrompt(obj) and obj.Parent and obj.Parent:IsA("BasePart") then
                 local dist = (char.HumanoidRootPart.Position - obj.Parent.Position).Magnitude
                 if dist < shortestDistance then
                     shortestDistance = dist
@@ -219,9 +326,9 @@ button2.MouseButton1Click:Connect(function()
     end
 end)
 
--- Tombol 3: Tutup/Buka GUI
 button3.MouseButton1Click:Connect(function()
     menu.Visible = false
+    openBtn.Visible = true
 end)
 
 --==================================================
