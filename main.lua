@@ -1,6 +1,4 @@
---// SYADZZ HUB - ULTIMATE FEATURE-PACKED EDITION (STEAL AN EGG)
---// Based on requested feature list: Auto Steal, Sell, Hatch, Gym, Upgrades, ESP & Performance[cite: 2]
-
+--// SYADZZ HUB - ULTIMATE ACCURATE ZONE EDITION (STEAL AN EGG)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -18,14 +16,14 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg 🥚 [Ultimate Edition]",
+    Name = "SYADZZ HUB | Steal an Egg 🥚 [Ultimate Zone Edition]",
     LoadingTitle = "Loading Ultimate Hub...",
     LoadingSubtitle = "by Syadholicc",
     ConfigurationSaving = { Enabled = true, FolderName = "SyadzzHubConfig" },
     KeySystem = false
 })
 
--- CONFIGURATION SETTINGS (ALL OFF BY DEFAULT)[cite: 2]
+-- CONFIGURATION SETTINGS (SEMUA MATI / OFF DEFAULT)
 local Settings = {
     AutoSteal = false,
     AutoPlace = false,
@@ -37,15 +35,29 @@ local Settings = {
     AutoUpgradePen = false,
     AutoBuyTrails = false,
     AutoEquipBestGear = false,
-    AutoClaimRewards = false,
     EggESP = false,
     MaxFPS = false,
     KillVFX = false,
-    SelectedArea = "All (none)",
-    TargetRarity = "All"
+    SelectedArea = "All (none)"
 }
 
--- HELPER FUNCTIONS
+-- DAFTAR ZONA RESMI SESUAI DATA GAME
+local GameZones = {
+    "All (none)",
+    "Forest",
+    "Lake",
+    "Desert",
+    "Jungle",
+    "Snow",
+    "Volcano",
+    "Abyss Ocean",
+    "Prehistoric",
+    "Cosmic",
+    "Cherry Blossom",
+    "Titan Temple",
+    "Enchanted Forest"
+}
+
 local function getMyPlotStrict()
     local possibleFolders = {"Plots", "Bases", "PlotFolder", "PlayerPlots"}
     for _, fName in ipairs(possibleFolders) do
@@ -69,13 +81,13 @@ local function getMySafeZoneCFrame()
     return LocalPlayer.Character and LocalPlayer.Character.HumanoidRootPart.CFrame
 end
 
--- TABS CREATION[cite: 2]
+-- TABS CREATION
 local FarmTab = Window:CreateTab("Auto Farm & Steal", 4483362458)
 local InventoryTab = Window:CreateTab("Eggs & Pets", 4483362458)
 local GymTab = Window:CreateTab("Gym & Upgrades", 4483362458)
 local MiscTab = Window:CreateTab("Visuals & Misc", 4483362458)
 
--- 1. FARM TAB[cite: 2]
+-- 1. FARM TAB
 FarmTab:CreateToggle({
     Name = "Auto Steal Egg",
     CurrentValue = false,
@@ -89,13 +101,13 @@ FarmTab:CreateToggle({
 })
 
 FarmTab:CreateDropdown({
-    Name = "Filter by Area",
-    Options = {"All (none)", "Enchanted Forest", "Cosmic", "Prehistoric", "Volcano", "Snow", "Jungle", "Desert", "Lake"},
+    Name = "Filter by Zone Area",
+    Options = GameZones,
     CurrentOption = {"All (none)"},
     Callback = function(opt) Settings.SelectedArea = opt[1] end,
 })
 
--- 2. INVENTORY & PETS TAB[cite: 2]
+-- 2. INVENTORY & PETS TAB
 InventoryTab:CreateToggle({
     Name = "Auto Hatch Ready Eggs",
     CurrentValue = false,
@@ -114,17 +126,7 @@ InventoryTab:CreateToggle({
     Callback = function(v) Settings.AutoSellPets = v end,
 })
 
-InventoryTab:CreateButton({
-    Name = "Place Best Pets Instant",
-    Callback = function()
-        pcall(function()
-            -- Placeholder logic untuk equip/place pet terbaik secara instan
-            print("Placing Best Pets...")
-        end)
-    end,
-})
-
--- 3. GYM & UPGRADES TAB[cite: 2]
+-- 3. GYM & UPGRADES TAB
 GymTab:CreateToggle({
     Name = "Auto Treadmill Training",
     CurrentValue = false,
@@ -149,13 +151,7 @@ GymTab:CreateToggle({
     Callback = function(v) Settings.AutoBuyTrails = v end,
 })
 
-GymTab:CreateToggle({
-    Name = "Auto Equip Best Gear",
-    CurrentValue = false,
-    Callback = function(v) Settings.AutoEquipBestGear = v end,
-})
-
--- 4. VISUALS & MISC TAB[cite: 2]
+-- 4. VISUALS & MISC TAB
 MiscTab:CreateToggle({
     Name = "Egg ESP (Highlight High Tier)",
     CurrentValue = false,
@@ -188,30 +184,35 @@ MiscTab:CreateToggle({
     end,
 })
 
-MiscTab:CreateButton({
-    Name = "Auto Server Hop",
-    Callback = function()
-        pcall(function()
-            local ts = game:GetService("TeleportService")
-            local p = Players.LocalPlayer
-            ts:Teleport(game.PlaceId, p)
-        end)
-    end,
-})
-
--- BACKGROUND EXECUTION LOOPS[cite: 2]
+-- BACKGROUND EXECUTION LOOPS (AUTO STEAL DENGAN FILTER ZONA)
 task.spawn(function()
     while task.wait(0.25) do
         pcall(function()
             local char = LocalPlayer.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
-            -- Auto Steal Loop
             if Settings.AutoSteal then
                 for _, obj in pairs(Workspace:GetDescendants()) do
                     if obj:IsA("ProximityPrompt") then
                         local pName = obj.Parent and obj.Parent.Name:lower() or ""
-                        if pName:find("egg") or obj.ObjectText:lower():find("egg") then
+                        local fullParentHierarchy = ""
+                        local curr = obj.Parent
+                        for i = 1, 6 do
+                            if curr then
+                                fullParentHierarchy = fullParentHierarchy .. " " .. curr.Name:lower()
+                                curr = curr.Parent
+                            end
+                        end
+
+                        -- Cek apakah sesuai zona yang dipilih di dropdown
+                        local zoneMatch = true
+                        if Settings.SelectedArea ~= "All (none)" then
+                            if not fullParentHierarchy:find(Settings.SelectedArea:lower():gsub("%s+", "")) then
+                                zoneMatch = false
+                            end
+                        end
+
+                        if zoneMatch and (pName:find("egg") or obj.ObjectText:lower():find("egg")) then
                             local part = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart", true)
                             if part then
                                 local safeCFrame = getMySafeZoneCFrame()
@@ -230,15 +231,18 @@ task.spawn(function()
                 end
             end
 
-            -- Auto Treadmill Loop
+            -- Auto Treadmill Loop (Akurat berdasarkan nama treadmill)
             if Settings.AutoTreadmill then
                 local myPlot = getMyPlotStrict()
                 if myPlot then
                     for _, obj in pairs(myPlot:GetDescendants()) do
-                        if obj:IsA("BasePart") and (obj.Name:lower():find("treadmill") or obj.Name:lower():find("trainer")) then
-                            char.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                            char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-                            break
+                        if obj:IsA("BasePart") then
+                            local oName = obj.Name:lower()
+                            if oName:find("treadmill") or oName:find("trainer") or oName:find("freeze") or oName:find("astral") or oName:find("flame") then
+                                char.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                                char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                                break
+                            end
                         end
                     end
                 end
@@ -247,7 +251,7 @@ task.spawn(function()
     end
 end)
 
--- AUTO PLACE TO PEN LOOP[cite: 2]
+-- AUTO PLACE TO PEN LOOP
 task.spawn(function()
     while task.wait(0.5) do
         if Settings.AutoPlace then
@@ -272,7 +276,7 @@ task.spawn(function()
 end)
 
 Rayfield:Notify({
-    Title = "SYADZZ HUB (Ultimate)",
-    Content = "Loaded Successfully! All features are set to OFF by default[cite: 2].",
+    Title = "SYADZZ HUB (Ultimate Zone)",
+    Content = "Loaded Successfully! Zones synced with game data.",
     Duration = 5,
 })
