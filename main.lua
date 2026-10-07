@@ -1,11 +1,11 @@
---// SYADZZ HUB - DYNAMIC PLOT TREADMILL & SMART AUTO STEAL
+--// SYADZZ HUB - FULL ACCURATE SCRIPT WITH CUSTOM SYADHOLICC LOGO
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- CLEANUP GUI LAMA JIKA ADA
+-- 1. CLEANUP GUI LAMA JIKA MASIH ADA
 pcall(function()
     if LocalPlayer.PlayerGui:FindFirstChild("SyadzzPrivateScript") then
         LocalPlayer.PlayerGui.SyadzzPrivateScript:Destroy()
@@ -15,7 +15,7 @@ pcall(function()
     end
 end)
 
--- LOAD RAYFIELD UI LIBRARY
+-- 2. LOAD RAYFIELD UI LIBRARY
 local Rayfield
 local success, err = pcall(function()
     Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -25,10 +25,13 @@ if not success or not Rayfield then
     Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 end
 
+-- ASSET ID LOGO SYADHOLICC
+local customLogoId = "rbxassetid://87188655335018"
+
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg",
+    Name = "SYADZZ HUB | Steal an Egg 🥚",
     LoadingTitle = "SYADZZ HUB Loading...",
-    LoadingSubtitle = "by Syadzz",
+    LoadingSubtitle = "by Syadzz & Syadholicc",
     ConfigurationSaving = { Enabled = false },
     KeySystem = true,
     KeySettings = {
@@ -42,7 +45,7 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- SETTINGS CONFIGURATION (ALL DEFAULT OFF)
+-- SETTINGS CONFIGURATION (SEMUA DEFAULT OFF)
 local Settings = {
     TeleportSteal = false,
     AutoSteal = false,
@@ -53,8 +56,8 @@ local Settings = {
     StealMethod = "Glide",
     StealSpeed = 100,
 
-    PetNames = "All",
-    Areas = "All",
+    PetNames = "All (none)",
+    SelectedArea = "All (none)",
     Rarities = {
         ["Divine"] = false,
         ["Eternal"] = false,
@@ -72,7 +75,7 @@ local Settings = {
     MinEggKG = "0"
 }
 
--- BOBOT RARITY (TERBAGUS KE BIASA)
+-- RARITY WEIGHTS (URUTAN KUALITAS TELUR)
 local RarityWeight = {
     ["Divine"] = 10,
     ["Eternal"] = 9,
@@ -87,18 +90,29 @@ local RarityWeight = {
 }
 
 -- HELPER FUNCTIONS
-local function getEggRarityNameAndWeight(model)
-    if not model then return "Uncommon", 1 end
-    local modelName = model.Name
-    for rarity, weight in pairs(RarityWeight) do
-        if modelName:lower():find(rarity:lower()) then return rarity, weight end
-    end
-    if model:FindFirstChild("Rarity") then
-        local rVal = tostring(model.Rarity.Value)
-        for rarity, weight in pairs(RarityWeight) do
-            if rVal:lower():find(rarity:lower()) then return rarity, weight end
+
+local function getEggRarityNameAndWeight(eggObj)
+    if not eggObj then return "Uncommon", 1 end
+    
+    local fullText = ""
+    local curr = eggObj
+    for i = 1, 4 do
+        if curr then
+            fullText = fullText .. " " .. curr.Name:lower()
+            curr = curr.Parent
         end
     end
+
+    if eggObj:FindFirstChild("Rarity") then
+        fullText = fullText .. " " .. tostring(eggObj.Rarity.Value):lower()
+    end
+
+    for rarity, weight in pairs(RarityWeight) do
+        if fullText:find(rarity:lower()) then
+            return rarity, weight
+        end
+    end
+    
     return "Uncommon", 1
 end
 
@@ -127,16 +141,15 @@ local function isRealEggPrompt(prompt)
     return false
 end
 
--- AMBIL BASE / PLOT MILIK PLAYER SECARA DINAMIS
-local function getMyPlot()
+-- DETEKSI PLOT KHUSUS MILIK SENDIRI
+local function getMyPlotStrict()
     local plotsFolder = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("PlotsFolder")
     if plotsFolder then
         for _, plot in pairs(plotsFolder:GetChildren()) do
-            -- Cek nama Plot atau atribut Owner
             if plot.Name == LocalPlayer.Name or plot.Name:lower():find(LocalPlayer.Name:lower()) then
                 return plot
             end
-            local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player")
+            local ownerVal = plot:FindFirstChild("Owner") or plot:FindFirstChild("Player") or plot:FindFirstChild("OwnerValue")
             if ownerVal and (tostring(ownerVal.Value) == LocalPlayer.Name or ownerVal.Value == LocalPlayer) then
                 return plot
             end
@@ -145,13 +158,18 @@ local function getMyPlot()
     return nil
 end
 
-local function getMyBaseCFrame()
-    local myPlot = getMyPlot()
+-- DETEKSI ZONA AMAN BASE SENDIRI
+local function getMySafeZoneCFrame()
+    local myPlot = getMyPlotStrict()
     if myPlot then
-        local safeZone = myPlot:FindFirstChild("SafeZone", true) or myPlot:FindFirstChild("Pen", true) or myPlot:FindFirstChild("Spawn", true)
-        if safeZone then
-            local p = safeZone:IsA("BasePart") and safeZone or safeZone:FindFirstChildWhichIsA("BasePart", true)
-            if p then return p.CFrame + Vector3.new(0, 3, 0) end
+        for _, obj in pairs(myPlot:GetDescendants()) do
+            local oName = obj.Name:lower()
+            if oName:find("zona aman") or oName:find("safezone") or oName:find("safe zone") or oName:find("spawn") then
+                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    return part.CFrame + Vector3.new(0, 3, 0)
+                end
+            end
         end
         return myPlot:GetPivot() + Vector3.new(0, 3, 0)
     end
@@ -160,8 +178,18 @@ end
 
 -- TABS
 local StealTab = Window:CreateTab("Steal", 4483362458)
+local FilterTab = Window:CreateTab("Filter Tools", 4483362458)
+local ProfileTab = Window:CreateTab("SYADHOLICC", 4483362458)
 
--- UI TOGGLES
+-- PROFILE TAB DENGAN LOGO CUSTOM SYADHOLICC
+ProfileTab:CreateSection("SYADHOLICC Official Logo")
+ProfileTab:CreateLabel("Owner: SYADHOLICC")
+ProfileTab:CreateImage({
+    Name = "SYADHOLICC Logo",
+    Image = customLogoId
+})
+
+-- STEAL TAB UI
 StealTab:CreateToggle({
     Name = "Teleport Steal",
     CurrentValue = false,
@@ -193,7 +221,7 @@ StealTab:CreateToggle({
 })
 
 StealTab:CreateToggle({
-    Name = "Auto Treadmill",
+    Name = "Auto Treadmill (Plot Sendiri Only)",
     CurrentValue = false,
     Callback = function(Value) Settings.AutoTreadmill = Value end,
 })
@@ -215,29 +243,47 @@ StealTab:CreateSlider({
     Callback = function(Value) Settings.StealSpeed = Value end,
 })
 
-StealTab:CreateSection("Filter Tools")
+-- FILTER TAB UI
+FilterTab:CreateDropdown({
+    Name = "Pet Names",
+    Options = {"All (none)", "Custom"},
+    CurrentOption = {"All (none)"},
+    MultipleOptions = false,
+    Callback = function(Option) Settings.PetNames = Option[1] end,
+})
+
+FilterTab:CreateDropdown({
+    Name = "Areas",
+    Options = {"All (none)", "Enchanted Forest", "Light Dark", "Titan Temple", "Cherry Blossom", "Cosmic", "Prehistoric", "Abyss Ocean", "Volcano", "Snow", "Jungle", "Desert", "Lake"},
+    CurrentOption = {"All (none)"},
+    MultipleOptions = false,
+    Callback = function(Option) Settings.SelectedArea = Option[1] end,
+})
+
 local rarities = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare", "SuperRare", "Uncommon"}
 for _, rarity in ipairs(rarities) do
-    StealTab:CreateToggle({
+    FilterTab:CreateToggle({
         Name = "Filter: " .. rarity,
         CurrentValue = false,
         Callback = function(Value) Settings.Rarities[rarity] = Value end,
     })
 end
 
--- LOGIKA AUTO STEAL
+-- LOGIKA AUTO STEAL (PRESISI AREA, RARITY & TELEPORT TO ZONA AMAN)
 task.spawn(function()
-    while task.wait(0.15) do
+    while task.wait(0.12) do
         if Settings.AutoSteal or Settings.TeleportSteal then
             pcall(function()
                 local char = LocalPlayer.Character
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
                 local targets = {}
-                local activeFilters = {}
+                local activeRarityFilters = {}
 
                 for rName, active in pairs(Settings.Rarities) do
-                    if active then table.insert(activeFilters, rName:lower()) end
+                    if active then
+                        table.insert(activeRarityFilters, rName:lower())
+                    end
                 end
 
                 for _, obj in pairs(Workspace:GetDescendants()) do
@@ -247,19 +293,37 @@ task.spawn(function()
                         if eggPart then
                             local rName, rWeight = getEggRarityNameAndWeight(eggModel)
 
-                            local isAllowed = false
-                            if #activeFilters == 0 then
-                                isAllowed = true
+                            -- Area Check
+                            local areaMatch = true
+                            if Settings.SelectedArea ~= "All (none)" and Settings.SelectedArea ~= "All" then
+                                local targetAreaName = Settings.SelectedArea:lower()
+                                local fullParentHierarchy = ""
+                                local parentTracker = eggModel
+                                for i = 1, 5 do
+                                    if parentTracker then
+                                        fullParentHierarchy = fullParentHierarchy .. " " .. parentTracker.Name:lower()
+                                        parentTracker = parentTracker.Parent
+                                    end
+                                end
+                                if not fullParentHierarchy:find(targetAreaName) then
+                                    areaMatch = false
+                                end
+                            end
+
+                            -- Rarity Check
+                            local rarityMatch = false
+                            if #activeRarityFilters == 0 then
+                                rarityMatch = true
                             else
-                                for _, filterName in ipairs(activeFilters) do
+                                for _, filterName in ipairs(activeRarityFilters) do
                                     if rName:lower():find(filterName) or eggModel.Name:lower():find(filterName) then
-                                        isAllowed = true
+                                        rarityMatch = true
                                         break
                                     end
                                 end
                             end
 
-                            if isAllowed then
+                            if areaMatch and rarityMatch then
                                 table.insert(targets, {
                                     prompt = obj,
                                     part = eggPart,
@@ -271,6 +335,7 @@ task.spawn(function()
                     end
                 end
 
+                -- Prioritaskan Telur Paling Bagus
                 table.sort(targets, function(a, b)
                     if a.weight ~= b.weight then
                         return a.weight > b.weight
@@ -280,18 +345,21 @@ task.spawn(function()
 
                 if #targets > 0 then
                     local target = targets[1]
-                    local myBase = getMyBaseCFrame()
+                    local safeZoneCFrame = getMySafeZoneCFrame()
 
+                    -- Teleport ke lokasi telur
                     char.HumanoidRootPart.CFrame = target.part.CFrame * CFrame.new(0, 2.5, 0)
-                    task.wait(0.1)
+                    task.wait(0.08)
 
+                    -- Trigger Pengambilan Telur
                     target.prompt.RequiresLineOfSight = false
                     fireproximityprompt(target.prompt)
-                    task.wait(0.2)
+                    task.wait(0.12)
 
-                    if myBase then
-                        char.HumanoidRootPart.CFrame = myBase
-                        task.wait(0.2)
+                    -- Berpindah Balik ke Zona Aman
+                    if safeZoneCFrame then
+                        char.HumanoidRootPart.CFrame = safeZoneCFrame
+                        task.wait(0.15)
                     end
                 end
             end)
@@ -299,18 +367,18 @@ task.spawn(function()
     end
 end)
 
--- LOGIKA AUTO TREADMILL DINAMIS KAMPUS/BASE SENDIRI
+-- LOGIKA AUTO TREADMILL (STRICT KHUSUS PLOT SENDIRI)
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.15) do
         if Settings.AutoTreadmill then
             pcall(function()
                 local char = LocalPlayer.Character
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
+                local myPlot = getMyPlotStrict()
                 local targetTreadmill = nil
-                local myPlot = getMyPlot()
 
-                -- 1. Cari Treadmill di dalam Plot milik kamu sendiri lebih dulu
+                -- HANYA MENCARI DI DALAM PLOT SENDIRI
                 if myPlot then
                     for _, obj in pairs(myPlot:GetDescendants()) do
                         local oName = obj.Name:lower()
@@ -321,32 +389,11 @@ task.spawn(function()
                     end
                 end
 
-                -- 2. Jika tidak ada di Plot, cari treadmill terdekat dari posisi Base kamu
-                if not targetTreadmill then
-                    local myBaseCF = getMyBaseCFrame()
-                    local shortestDist = math.huge
-                    
-                    for _, obj in pairs(Workspace:GetDescendants()) do
-                        local oName = obj.Name:lower()
-                        if oName:find("treadmill") or oName:find("trainer") then
-                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                            if part and myBaseCF then
-                                local dist = (myBaseCF.Position - part.Position).Magnitude
-                                if dist < shortestDist then
-                                    shortestDist = dist
-                                    targetTreadmill = part
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- 3. Teleport & Kunci Posisi di Atas Treadmill Sesuai Arah Hadap Mesin
+                -- Kunci Posisi di Atas Treadmill Plot Sendiri
                 if targetTreadmill then
                     local treadmillCFrame = targetTreadmill.CFrame
                     local positionAbove = treadmillCFrame.Position + Vector3.new(0, 2.8, 0)
                     
-                    -- Mengunci posisi dan rotasi agar karakter selalu menghadap lurus sesuai arah treadmill
                     char.HumanoidRootPart.CFrame = CFrame.new(positionAbove, positionAbove + treadmillCFrame.LookVector)
                     char.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
                 end
