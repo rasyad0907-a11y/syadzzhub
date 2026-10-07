@@ -1,372 +1,973 @@
---==================================================
--- SYADZZ HUB
--- UI ONLY - OPEN / CLOSE / DRAG
---==================================================
+--[[
+    SYADZZ AUTO STEAL
+    Single-file clean-room template
+    Untuk game Roblox yang kamu miliki/kembangkan.
+
+    Semua konfigurasi ada di bagian CONFIG.
+]]
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
-local player = Players.LocalPlayer
+------------------------------------------------------------
+-- CONFIG
+------------------------------------------------------------
 
-if not player then
-    warn("[SYADZZ] LocalPlayer belum tersedia.")
-    return
+local CONFIG = {
+    ScanInterval = 0.5,
+
+    MinKG = 0,
+
+    Priority = "RARITY",
+    -- RARITY / KG / DISTANCE
+
+    StealFromPlayers = true,
+    AutoPlaceToPen = true,
+
+    EggFolderNames = {
+        "Eggs",
+        "Egg",
+        "EggSpawns",
+        "EggSpawn",
+        "EggsFolder",
+    },
+
+    PlotFolderNames = {
+        "Plots",
+        "Plot",
+        "Bases",
+        "Base",
+        "PlayerPlots",
+        "PlayerBases",
+    },
+
+    PenNames = {
+        "Pen",
+        "EggPen",
+        "PetPen",
+        "Pets",
+    },
+}
+
+------------------------------------------------------------
+-- REMOTE
+------------------------------------------------------------
+
+local Remote = ReplicatedStorage:FindFirstChild("SYADZZ_AutoSteal")
+
+if not Remote then
+    Remote = Instance.new("RemoteEvent")
+    Remote.Name = "SYADZZ_AutoSteal"
+    Remote.Parent = ReplicatedStorage
 end
 
-local function getUIParent()
-    -- Untuk environment yang menyediakan gethui()
-    if type(gethui) == "function" then
-        local ok, result = pcall(gethui)
-        if ok and result then
-            return result
+------------------------------------------------------------
+-- PLAYER SETTINGS
+------------------------------------------------------------
+
+local Settings = {}
+
+local function getSettings(player)
+    if not Settings[player] then
+        Settings[player] = {
+            Enabled = false,
+            StealFromPlayers = CONFIG.StealFromPlayers,
+            AutoPlaceToPen = CONFIG.AutoPlaceToPen,
+            MinKG = CONFIG.MinKG,
+            Priority = CONFIG.Priority,
+        }
+    end
+
+    return Settings[player]
+end
+
+------------------------------------------------------------
+-- HELPERS
+------------------------------------------------------------
+
+local function lower(value)
+    return string.lower(tostring(value))
+end
+
+local function nameMatches(name, list)
+    name = lower(name)
+
+    for _, wanted in ipairs(list) do
+        if name == lower(wanted) then
+            return true
         end
     end
 
-    -- Fallback Roblox normal
-    return player:WaitForChild("PlayerGui")
+    return false
 end
 
-local uiParent = getUIParent()
-
---==================================================
--- HAPUS GUI LAMA
---==================================================
-
-pcall(function()
-    local old = uiParent:FindFirstChild("SYADZZ_HUB")
-    if old then
-        old:Destroy()
+local function getPosition(object)
+    if object:IsA("BasePart") then
+        return object.Position
     end
-end)
 
---==================================================
--- SCREEN GUI
---==================================================
+    if object:IsA("Model") then
+        return object:GetPivot().Position
+    end
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "SYADZZ_HUB"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.DisplayOrder = 999999
-gui.Parent = uiParent
+    return nil
+end
 
---==================================================
--- OPEN BUTTON
---==================================================
+------------------------------------------------------------
+-- FIND EGG FOLDERS
+------------------------------------------------------------
 
-local openButton = Instance.new("TextButton")
-openButton.Name = "OpenButton"
-openButton.Size = UDim2.fromOffset(110, 42)
-openButton.Position = UDim2.new(0, 15, 0.5, -21)
-openButton.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-openButton.BorderSizePixel = 0
-openButton.Text = "SYADZZ"
-openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-openButton.TextSize = 16
-openButton.Font = Enum.Font.GothamBold
-openButton.AutoButtonColor = false
-openButton.Visible = false
-openButton.Parent = gui
+local function findEggFolders()
+    local result = {}
 
-local openCorner = Instance.new("UICorner")
-openCorner.CornerRadius = UDim.new(0, 10)
-openCorner.Parent = openButton
-
-local openStroke = Instance.new("UIStroke")
-openStroke.Color = Color3.fromRGB(80, 255, 140)
-openStroke.Thickness = 1.5
-openStroke.Parent = openButton
-
---==================================================
--- MAIN PANEL
---==================================================
-
-local main = Instance.new("Frame")
-main.Name = "MainPanel"
-main.AnchorPoint = Vector2.new(0.5, 0.5)
-main.Size = UDim2.fromOffset(500, 350)
-main.Position = UDim2.fromScale(0.5, 0.5)
-main.BackgroundColor3 = Color3.fromRGB(13, 13, 17)
-main.BorderSizePixel = 0
-main.Visible = true
-main.Parent = gui
-
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 14)
-mainCorner.Parent = main
-
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = Color3.fromRGB(60, 60, 70)
-mainStroke.Thickness = 1
-mainStroke.Parent = main
-
---==================================================
--- HEADER
---==================================================
-
-local header = Instance.new("Frame")
-header.Name = "Header"
-header.Size = UDim2.new(1, 0, 0, 62)
-header.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-header.BorderSizePixel = 0
-header.Parent = main
-
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 14)
-headerCorner.Parent = header
-
-local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.BackgroundTransparency = 1
-title.Position = UDim2.fromOffset(18, 8)
-title.Size = UDim2.new(1, -80, 0, 26)
-title.Text = "SYADZZ HUB"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 21
-title.Font = Enum.Font.GothamBold
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = header
-
-local subtitle = Instance.new("TextLabel")
-subtitle.Name = "Subtitle"
-subtitle.BackgroundTransparency = 1
-subtitle.Position = UDim2.fromOffset(19, 34)
-subtitle.Size = UDim2.new(1, -80, 0, 18)
-subtitle.Text = "SYADZZHUB • CONTROL PANEL"
-subtitle.TextColor3 = Color3.fromRGB(130, 130, 140)
-subtitle.TextSize = 10
-subtitle.Font = Enum.Font.Gotham
-subtitle.TextXAlignment = Enum.TextXAlignment.Left
-subtitle.Parent = header
-
---==================================================
--- CLOSE BUTTON
---==================================================
-
-local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.fromOffset(36, 36)
-closeButton.Position = UDim2.new(1, -48, 0, 13)
-closeButton.BackgroundColor3 = Color3.fromRGB(38, 38, 45)
-closeButton.BorderSizePixel = 0
-closeButton.Text = "×"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 24
-closeButton.Font = Enum.Font.GothamBold
-closeButton.AutoButtonColor = false
-closeButton.Parent = header
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 9)
-closeCorner.Parent = closeButton
-
---==================================================
--- CONTENT
---==================================================
-
-local content = Instance.new("ScrollingFrame")
-content.Name = "Content"
-content.Position = UDim2.fromOffset(15, 76)
-content.Size = UDim2.new(1, -30, 1, -91)
-content.BackgroundTransparency = 1
-content.BorderSizePixel = 0
-content.ScrollBarThickness = 3
-content.CanvasSize = UDim2.new(0, 0, 0, 0)
-content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-content.ScrollingDirection = Enum.ScrollingDirection.Y
-content.Parent = main
-
-local padding = Instance.new("UIPadding")
-padding.PaddingBottom = UDim.new(0, 8)
-padding.Parent = content
-
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 9)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = content
-
---==================================================
--- FEATURE CREATOR
---==================================================
-
-local function createFeature(name, description)
-    local button = Instance.new("TextButton")
-
-    button.Name = name:gsub("%s+", "_")
-    button.Size = UDim2.new(1, -4, 0, 62)
-    button.BackgroundColor3 = Color3.fromRGB(23, 23, 29)
-    button.BorderSizePixel = 0
-    button.Text = ""
-    button.AutoButtonColor = false
-    button.Parent = content
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = button
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(43, 43, 52)
-    stroke.Thickness = 1
-    stroke.Parent = button
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Position = UDim2.fromOffset(14, 8)
-    nameLabel.Size = UDim2.new(1, -95, 0, 22)
-    nameLabel.Text = name
-    nameLabel.TextColor3 = Color3.fromRGB(245, 245, 245)
-    nameLabel.TextSize = 15
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Parent = button
-
-    local descLabel = Instance.new("TextLabel")
-    descLabel.BackgroundTransparency = 1
-    descLabel.Position = UDim2.fromOffset(14, 31)
-    descLabel.Size = UDim2.new(1, -28, 0, 18)
-    descLabel.Text = description
-    descLabel.TextColor3 = Color3.fromRGB(130, 130, 140)
-    descLabel.TextSize = 11
-    descLabel.Font = Enum.Font.Gotham
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.Parent = button
-
-    local status = Instance.new("TextLabel")
-    status.Name = "Status"
-    status.BackgroundTransparency = 1
-    status.AnchorPoint = Vector2.new(1, 0.5)
-    status.Position = UDim2.new(1, -14, 0.5, -2)
-    status.Size = UDim2.fromOffset(48, 25)
-    status.Text = "OFF"
-    status.TextColor3 = Color3.fromRGB(150, 150, 160)
-    status.TextSize = 12
-    status.Font = Enum.Font.GothamBold
-    status.Parent = button
-
-    local enabled = false
-
-    button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(29, 29, 36)
-    end)
-
-    button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(23, 23, 29)
-    end)
-
-    button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-
-        if enabled then
-            status.Text = "ON"
-            status.TextColor3 = Color3.fromRGB(80, 255, 140)
-
-            stroke.Color = Color3.fromRGB(80, 255, 140)
-
-            print("[SYADZZ] " .. name .. " -> ON")
-        else
-            status.Text = "OFF"
-            status.TextColor3 = Color3.fromRGB(150, 150, 160)
-
-            stroke.Color = Color3.fromRGB(43, 43, 52)
-
-            print("[SYADZZ] " .. name .. " -> OFF")
+    for _, object in ipairs(Workspace:GetDescendants()) do
+        if object:IsA("Folder") or object:IsA("Model") then
+            if nameMatches(object.Name, CONFIG.EggFolderNames) then
+                table.insert(result, object)
+            end
         end
-    end)
+    end
 
-    return button
+    return result
 end
 
---==================================================
--- FEATURES
---==================================================
+------------------------------------------------------------
+-- KG
+------------------------------------------------------------
 
-createFeature(
-    "AUTO STEAL",
-    "Automatically select matching eggs"
-)
+local function getKG(object)
+    local attributeNames = {
+        "KG",
+        "Kg",
+        "kg",
+        "Weight",
+        "WeightKG",
+    }
 
-createFeature(
-    "STEAL FROM PLAYERS",
-    "Player target settings"
-)
+    for _, name in ipairs(attributeNames) do
+        local value = object:GetAttribute(name)
 
-createFeature(
-    "AUTO STEAL SPEED",
-    "Automatic speed settings"
-)
-
-createFeature(
-    "AUTO PLACE TO PEN",
-    "Automatically place selected eggs"
-)
-
---==================================================
--- OPEN / CLOSE
---==================================================
-
-closeButton.MouseButton1Click:Connect(function()
-    main.Visible = false
-    openButton.Visible = true
-end)
-
-openButton.MouseButton1Click:Connect(function()
-    main.Visible = true
-    openButton.Visible = false
-end)
-
---==================================================
--- DRAG SYSTEM
---==================================================
-
-local dragging = false
-local dragStart = nil
-local startPosition = nil
-
-header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = true
-        dragStart = input.Position
-        startPosition = main.Position
-    end
-end)
-
-header.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if not dragging then
-        return
+        if typeof(value) == "number" then
+            return value
+        end
     end
 
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
+    for _, child in ipairs(object:GetDescendants()) do
+        if child:IsA("NumberValue") then
+            local n = lower(child.Name)
 
-        local delta = input.Position - dragStart
+            if string.find(n, "kg", 1, true)
+                or string.find(n, "weight", 1, true) then
 
-        main.Position = UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
+                return child.Value
+            end
+        end
+    end
 
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
+    return 0
+end
+
+------------------------------------------------------------
+-- RARITY
+------------------------------------------------------------
+
+local RarityRank = {
+    common = 1,
+    uncommon = 2,
+    rare = 3,
+    epic = 4,
+    legendary = 5,
+    mythic = 6,
+    divine = 7,
+    secret = 8,
+}
+
+local function getRarity(object)
+    local value = object:GetAttribute("Rarity")
+
+    if typeof(value) == "string" then
+        return value
+    end
+
+    local rarity = object:FindFirstChild("Rarity")
+
+    if rarity and rarity:IsA("StringValue") then
+        return rarity.Value
+    end
+
+    return "Common"
+end
+
+------------------------------------------------------------
+-- EGG LIST
+------------------------------------------------------------
+
+local function getEggs()
+    local eggs = {}
+
+    for _, folder in ipairs(findEggFolders()) do
+        for _, object in ipairs(folder:GetDescendants()) do
+
+            if object:IsA("Model") or object:IsA("BasePart") then
+
+                local kg = getKG(object)
+
+                if kg >= CONFIG.MinKG then
+                    table.insert(eggs, {
+                        Object = object,
+                        KG = kg,
+                        Rarity = getRarity(object),
+                        Position = getPosition(object),
+                    })
+                end
+            end
+        end
+    end
+
+    return eggs
+end
+
+------------------------------------------------------------
+-- PLAYER PLOT
+------------------------------------------------------------
+
+local function findPlot(player)
+
+    for _, container in ipairs(Workspace:GetDescendants()) do
+
+        if container:IsA("Folder")
+            or container:IsA("Model") then
+
+            if nameMatches(
+                container.Name,
+                CONFIG.PlotFolderNames
+            ) then
+
+                for _, plot in ipairs(container:GetChildren()) do
+
+                    if lower(plot.Name) == lower(player.Name) then
+                        return plot
+                    end
+
+                    local owner = plot:GetAttribute("Owner")
+
+                    if owner == player.Name then
+                        return plot
+                    end
+
+                    local ownerId =
+                        plot:GetAttribute("OwnerUserId")
+
+                    if ownerId == player.UserId then
+                        return plot
+                    end
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+------------------------------------------------------------
+-- PEN
+------------------------------------------------------------
+
+local function findPen(player)
+
+    local plot = findPlot(player)
+
+    if not plot then
+        return nil
+    end
+
+    for _, object in ipairs(plot:GetDescendants()) do
+
+        if nameMatches(
+            object.Name,
+            CONFIG.PenNames
+        ) then
+
+            return object
+        end
+    end
+
+    return nil
+end
+
+------------------------------------------------------------
+-- SCORE
+------------------------------------------------------------
+
+local function getScore(player, egg)
+
+    local settings = getSettings(player)
+
+    if settings.Priority == "KG" then
+        return egg.KG
+    end
+
+    if settings.Priority == "RARITY" then
+        return RarityRank[
+            lower(egg.Rarity)
+        ] or 0
+    end
+
+    if settings.Priority == "DISTANCE" then
+
+        local character = player.Character
+
+        if character then
+
+            local root =
+                character:FindFirstChild(
+                    "HumanoidRootPart"
+                )
+
+            if root and egg.Position then
+
+                return -(
+                    root.Position -
+                    egg.Position
+                ).Magnitude
+            end
+        end
+    end
+
+    return egg.KG
+end
+
+------------------------------------------------------------
+-- BEST EGG
+------------------------------------------------------------
+
+local function getBestEgg(player)
+
+    local bestEgg = nil
+    local bestScore = -math.huge
+
+    for _, egg in ipairs(getEggs()) do
+
+        local score =
+            getScore(player, egg)
+
+        if score > bestScore then
+            bestScore = score
+            bestEgg = egg
+        end
+    end
+
+    return bestEgg
+end
+
+------------------------------------------------------------
+-- PLACE TO PEN
+------------------------------------------------------------
+
+local function placeToPen(player, egg)
+
+    local settings = getSettings(player)
+
+    if not settings.AutoPlaceToPen then
+        return false
+    end
+
+    local pen = findPen(player)
+
+    if not pen then
+        return false
+    end
+
+    local targetCFrame
+
+    if pen:IsA("BasePart") then
+        targetCFrame = pen.CFrame
+
+    elseif pen:IsA("Model") then
+        targetCFrame = pen:GetPivot()
+    end
+
+    if not targetCFrame then
+        return false
+    end
+
+    if egg:IsA("Model") then
+        egg:PivotTo(targetCFrame)
+        return true
+    end
+
+    if egg:IsA("BasePart") then
+        egg.CFrame = targetCFrame
+        return true
+    end
+
+    return false
+end
+
+------------------------------------------------------------
+-- STEAL
+------------------------------------------------------------
+
+local function steal(player, eggData)
+
+    local egg = eggData.Object
+
+    if not egg then
+        return false
+    end
+
+    if not egg.Parent then
+        return false
+    end
+
+    --------------------------------------------------------
+    -- OWNERSHIP ATTRIBUTES
+    -- Sistem game milik sendiri dapat menggantinya
+    -- dengan inventory/remote server yang sebenarnya.
+    --------------------------------------------------------
+
+    egg:SetAttribute(
+        "OwnerUserId",
+        player.UserId
+    )
+
+    egg:SetAttribute(
+        "OwnerName",
+        player.Name
+    )
+
+    egg:SetAttribute(
+        "CarriedByUserId",
+        player.UserId
+    )
+
+    --------------------------------------------------------
+    -- AUTO PLACE
+    --------------------------------------------------------
+
+    local placed =
+        placeToPen(player, egg)
+
+    if placed then
+
+        egg:SetAttribute(
+            "CarriedByUserId",
+            nil
+        )
+
+    end
+
+    return true
+end
+
+------------------------------------------------------------
+-- AUTO LOOP
+------------------------------------------------------------
+
+task.spawn(function()
+
+    while true do
+
+        for _, player in ipairs(
+            Players:GetPlayers()
+        ) do
+
+            local settings =
+                getSettings(player)
+
+            if settings.Enabled then
+
+                local egg =
+                    getBestEgg(player)
+
+                if egg then
+                    steal(player, egg)
+                end
+            end
+        end
+
+        task.wait(
+            CONFIG.ScanInterval
         )
     end
 end)
 
---==================================================
--- READY
---==================================================
+------------------------------------------------------------
+-- REMOTE COMMANDS
+------------------------------------------------------------
 
-print("================================")
-print("[SYADZZ HUB] PANEL LOADED")
-print("[SYADZZ HUB] UI Parent:", uiParent:GetFullName())
-print("[SYADZZ HUB] Ready")
-print("================================")
+Remote.OnServerEvent:Connect(
+    function(player, action, value)
+
+        local settings =
+            getSettings(player)
+
+        if action == "Toggle" then
+
+            settings.Enabled =
+                value == true
+
+        elseif action == "StealFromPlayers" then
+
+            settings.StealFromPlayers =
+                value == true
+
+        elseif action == "AutoPlaceToPen" then
+
+            settings.AutoPlaceToPen =
+                value == true
+
+        elseif action == "MinKG" then
+
+            local number =
+                tonumber(value)
+
+            if number then
+                settings.MinKG =
+                    math.max(0, number)
+            end
+
+        elseif action == "Priority" then
+
+            if value == "RARITY"
+                or value == "KG"
+                or value == "DISTANCE" then
+
+                settings.Priority =
+                    value
+            end
+        end
+    end
+)
+
+------------------------------------------------------------
+-- UI
+------------------------------------------------------------
+
+local function createUI(player)
+
+    local playerGui =
+        player:WaitForChild("PlayerGui")
+
+    local old =
+        playerGui:FindFirstChild(
+            "SYADZZ_AutoSteal"
+        )
+
+    if old then
+        old:Destroy()
+    end
+
+    local gui =
+        Instance.new("ScreenGui")
+
+    gui.Name =
+        "SYADZZ_AutoSteal"
+
+    gui.ResetOnSpawn =
+        false
+
+    gui.Parent =
+        playerGui
+
+    local frame =
+        Instance.new("Frame")
+
+    frame.Size =
+        UDim2.fromOffset(280, 340)
+
+    frame.Position =
+        UDim2.new(
+            0,
+            20,
+            0.5,
+            -170
+        )
+
+    frame.BackgroundColor3 =
+        Color3.fromRGB(
+            20,
+            20,
+            20
+        )
+
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+
+    local corner =
+        Instance.new("UICorner")
+
+    corner.CornerRadius =
+        UDim.new(0, 12)
+
+    corner.Parent = frame
+
+    local title =
+        Instance.new("TextLabel")
+
+    title.Size =
+        UDim2.new(1, 0, 0, 50)
+
+    title.BackgroundTransparency = 1
+
+    title.Text =
+        "SYADZZ AUTO STEAL"
+
+    title.TextColor3 =
+        Color3.fromRGB(
+            255,
+            217,
+            0
+        )
+
+    title.TextSize = 20
+    title.Font =
+        Enum.Font.GothamBold
+
+    title.Parent = frame
+
+    local function makeButton(text, y)
+
+        local button =
+            Instance.new("TextButton")
+
+        button.Size =
+            UDim2.new(
+                1,
+                -30,
+                0,
+                42
+            )
+
+        button.Position =
+            UDim2.fromOffset(
+                15,
+                y
+            )
+
+        button.BackgroundColor3 =
+            Color3.fromRGB(
+                42,
+                42,
+                42
+            )
+
+        button.TextColor3 =
+            Color3.new(
+                1,
+                1,
+                1
+            )
+
+        button.TextSize = 14
+
+        button.Font =
+            Enum.Font.GothamBold
+
+        button.Text =
+            text
+
+        button.Parent =
+            frame
+
+        local c =
+            Instance.new("UICorner")
+
+        c.CornerRadius =
+            UDim.new(0, 8)
+
+        c.Parent =
+            button
+
+        return button
+    end
+
+    local auto =
+        makeButton(
+            "AUTO STEAL : OFF",
+            55
+        )
+
+    local stealPlayers =
+        makeButton(
+            "STEAL FROM PLAYERS : ON",
+            105
+        )
+
+    local autoPlace =
+        makeButton(
+            "AUTO PLACE TO PEN : ON",
+            155
+        )
+
+    local priority =
+        makeButton(
+            "PRIORITY : RARITY",
+            205
+        )
+
+    local minKG =
+        makeButton(
+            "MIN KG : 0",
+            255
+        )
+
+    local close =
+        makeButton(
+            "CLOSE",
+            305
+        )
+
+    --------------------------------------------------------
+    -- STATE
+    --------------------------------------------------------
+
+    local enabled = false
+    local stealEnabled = true
+    local placeEnabled = true
+
+    --------------------------------------------------------
+    -- AUTO STEAL
+    --------------------------------------------------------
+
+    auto.MouseButton1Click:Connect(
+        function()
+
+            enabled =
+                not enabled
+
+            if enabled then
+
+                auto.Text =
+                    "AUTO STEAL : ON"
+
+            else
+
+                auto.Text =
+                    "AUTO STEAL : OFF"
+            end
+
+            Remote:FireServer(
+                "Toggle",
+                enabled
+            )
+        end
+    )
+
+    --------------------------------------------------------
+    -- PLAYER STEAL
+    --------------------------------------------------------
+
+    stealPlayers.MouseButton1Click:Connect(
+        function()
+
+            stealEnabled =
+                not stealEnabled
+
+            stealPlayers.Text =
+                "STEAL FROM PLAYERS : "
+                .. (
+                    stealEnabled
+                    and "ON"
+                    or "OFF"
+                )
+
+            Remote:FireServer(
+                "StealFromPlayers",
+                stealEnabled
+            )
+        end
+    )
+
+    --------------------------------------------------------
+    -- PEN
+    --------------------------------------------------------
+
+    autoPlace.MouseButton1Click:Connect(
+        function()
+
+            placeEnabled =
+                not placeEnabled
+
+            autoPlace.Text =
+                "AUTO PLACE TO PEN : "
+                .. (
+                    placeEnabled
+                    and "ON"
+                    or "OFF"
+                )
+
+            Remote:FireServer(
+                "AutoPlaceToPen",
+                placeEnabled
+            )
+        end
+    )
+
+    --------------------------------------------------------
+    -- PRIORITY
+    --------------------------------------------------------
+
+    local priorities = {
+        "RARITY",
+        "KG",
+        "DISTANCE",
+    }
+
+    local priorityIndex = 1
+
+    priority.MouseButton1Click:Connect(
+        function()
+
+            priorityIndex += 1
+
+            if priorityIndex >
+                #priorities then
+
+                priorityIndex = 1
+            end
+
+            local value =
+                priorities[
+                    priorityIndex
+                ]
+
+            priority.Text =
+                "PRIORITY : "
+                .. value
+
+            Remote:FireServer(
+                "Priority",
+                value
+            )
+        end
+    )
+
+    --------------------------------------------------------
+    -- MIN KG
+    --------------------------------------------------------
+
+    minKG.MouseButton1Click:Connect(
+        function()
+
+            local input =
+                Instance.new("TextBox")
+
+            input.Size =
+                UDim2.fromOffset(
+                    230,
+                    45
+                )
+
+            input.Position =
+                UDim2.new(
+                    0.5,
+                    -115,
+                    0.5,
+                    -22
+                )
+
+            input.BackgroundColor3 =
+                Color3.fromRGB(
+                    30,
+                    30,
+                    30
+                )
+
+            input.TextColor3 =
+                Color3.new(
+                    1,
+                    1,
+                    1
+                )
+
+            input.PlaceholderText =
+                "Minimum KG"
+
+            input.Text = ""
+
+            input.TextSize = 16
+
+            input.Parent = gui
+
+            input:CaptureFocus()
+
+            input.FocusLost:Connect(
+                function()
+
+                    local value =
+                        tonumber(
+                            input.Text
+                        )
+
+                    if not value then
+                        value = 0
+                    end
+
+                    minKG.Text =
+                        "MIN KG : "
+                        .. tostring(value)
+
+                    Remote:FireServer(
+                        "MinKG",
+                        value
+                    )
+
+                    input:Destroy()
+                end
+            )
+        end
+    )
+
+    --------------------------------------------------------
+    -- CLOSE
+    --------------------------------------------------------
+
+    close.MouseButton1Click:Connect(
+        function()
+            gui.Enabled = false
+        end
+    )
+end
+
+------------------------------------------------------------
+-- PLAYER ADDED
+------------------------------------------------------------
+
+Players.PlayerAdded:Connect(
+    function(player)
+
+        task.spawn(
+            function()
+                createUI(player)
+            end
+        )
+    end
+)
+
+for _, player in ipairs(
+    Players:GetPlayers()
+) do
+
+    task.spawn(
+        function()
+            createUI(player)
+        end
+    )
+end
+
+------------------------------------------------------------
+-- CLEANUP
+------------------------------------------------------------
+
+Players.PlayerRemoving:Connect(
+    function(player)
+
+        Settings[player] = nil
+    end
+)
+
+print(
+    "[SYADZZ] main.lua loaded"
+)
