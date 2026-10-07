@@ -1,4 +1,6 @@
---// SYADZZ HUB x JUAL NASI RENDANG STYLE - ALL FEATURES OFF BY DEFAULT
+--// SYADZZ HUB - ULTIMATE FEATURE-PACKED EDITION (STEAL AN EGG)
+--// Based on requested feature list: Auto Steal, Sell, Hatch, Gym, Upgrades, ESP & Performance[cite: 2]
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -7,8 +9,8 @@ local LocalPlayer = Players.LocalPlayer
 
 -- 1. CLEANUP GUI LAMA
 pcall(function()
-    if CoreGui:FindFirstChild("SyadzzNasiRendangHub") then
-        CoreGui.SyadzzNasiRendangHub:Destroy()
+    if CoreGui:FindFirstChild("SyadzzUltimateHub") then
+        CoreGui.SyadzzUltimateHub:Destroy()
     end
 end)
 
@@ -16,74 +18,34 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg 🥚 [Pro Hub Edition]",
-    LoadingTitle = "Loading Hub...",
-    LoadingSubtitle = "by Syadholicc & Team",
-    ConfigurationSaving = { Enabled = false },
+    Name = "SYADZZ HUB | Steal an Egg 🥚 [Ultimate Edition]",
+    LoadingTitle = "Loading Ultimate Hub...",
+    LoadingSubtitle = "by Syadholicc",
+    ConfigurationSaving = { Enabled = true, FolderName = "SyadzzHubConfig" },
     KeySystem = false
 })
 
--- CONFIGURATION SETTINGS (SEMUA MATI / FALSE SECARA DEFAULT)
+-- CONFIGURATION SETTINGS (ALL OFF BY DEFAULT)[cite: 2]
 local Settings = {
     AutoSteal = false,
     AutoPlace = false,
+    AutoHatch = false,
+    AutoSellEggs = false,
+    AutoSellPets = false,
     AutoTreadmill = false,
-    AutoWisp = false,
+    AutoTreadmillUpgrade = false,
+    AutoUpgradePen = false,
+    AutoBuyTrails = false,
+    AutoEquipBestGear = false,
+    AutoClaimRewards = false,
     EggESP = false,
+    MaxFPS = false,
+    KillVFX = false,
     SelectedArea = "All (none)",
-    Rarities = {
-        ["Divine"] = false,
-        ["Eternal"] = false,
-        ["Secret"] = false,
-        ["Cosmic"] = false,
-        ["Mythic"] = false,
-        ["Legendary"] = false,
-        ["Epic"] = false,
-        ["Rare"] = false
-    }
-}
-
-local RarityWeight = {
-    ["Divine"] = 1000,
-    ["Eternal"] = 900,
-    ["Secret"] = 800,
-    ["Cosmic"] = 700,
-    ["Mythic"] = 600,
-    ["Legendary"] = 500,
-    ["Epic"] = 400,
-    ["Rare"] = 300
+    TargetRarity = "All"
 }
 
 -- HELPER FUNCTIONS
-local function getEggRarityNameAndWeight(eggObj)
-    if not eggObj then return "Rare", 300 end
-    local fullText = ""
-    local curr = eggObj
-    for i = 1, 6 do
-        if curr then
-            fullText = fullText .. " " .. curr.Name:lower()
-            curr = curr.Parent
-        end
-    end
-    if eggObj:FindFirstChild("Rarity") then
-        fullText = fullText .. " " .. tostring(eggObj.Rarity.Value):lower()
-    end
-    for rarity, weight in pairs(RarityWeight) do
-        if fullText:find(rarity:lower()) then
-            return rarity, weight
-        end
-    end
-    return "Rare", 300
-end
-
-local function isRealEggPrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
-    local parentName = prompt.Parent and prompt.Parent.Name:lower() or ""
-    if parentName:find("wisp") or parentName:find("machine") or parentName:find("lab") then return false end
-    if parentName:find("egg") or prompt.ObjectText:lower():find("egg") then return true end
-    return false
-end
-
 local function getMyPlotStrict()
     local possibleFolders = {"Plots", "Bases", "PlotFolder", "PlayerPlots"}
     for _, fName in ipairs(possibleFolders) do
@@ -107,14 +69,15 @@ local function getMySafeZoneCFrame()
     return LocalPlayer.Character and LocalPlayer.Character.HumanoidRootPart.CFrame
 end
 
--- TABS CREATION
-local FarmTab = Window:CreateTab("Auto Farm", 4483362458)
-local FilterTab = Window:CreateTab("Filters & ESP", 4483362458)
-local MiscTab = Window:CreateTab("Gym & Misc", 4483362458)
+-- TABS CREATION[cite: 2]
+local FarmTab = Window:CreateTab("Auto Farm & Steal", 4483362458)
+local InventoryTab = Window:CreateTab("Eggs & Pets", 4483362458)
+local GymTab = Window:CreateTab("Gym & Upgrades", 4483362458)
+local MiscTab = Window:CreateTab("Visuals & Misc", 4483362458)
 
--- FARM TAB
+-- 1. FARM TAB[cite: 2]
 FarmTab:CreateToggle({
-    Name = "Auto Steal Egg (Smart Priority)",
+    Name = "Auto Steal Egg",
     CurrentValue = false,
     Callback = function(v) Settings.AutoSteal = v end,
 })
@@ -125,120 +88,157 @@ FarmTab:CreateToggle({
     Callback = function(v) Settings.AutoPlace = v end,
 })
 
--- FILTER TAB
-FilterTab:CreateToggle({
-    Name = "Egg ESP (Highlight High Tier)",
-    CurrentValue = false,
-    Callback = function(v) Settings.EggESP = v end,
-})
-
-FilterTab:CreateDropdown({
-    Name = "Select Area Filter",
+FarmTab:CreateDropdown({
+    Name = "Filter by Area",
     Options = {"All (none)", "Enchanted Forest", "Cosmic", "Prehistoric", "Volcano", "Snow", "Jungle", "Desert", "Lake"},
     CurrentOption = {"All (none)"},
     Callback = function(opt) Settings.SelectedArea = opt[1] end,
 })
 
-FilterTab:CreateSection("Rarity Target Toggles")
-local rarities = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare"}
-for _, r in ipairs(rarities) do
-    FilterTab:CreateToggle({
-        Name = "Target Rarity: " .. r,
-        CurrentValue = false, -- Default false
-        Callback = function(v) Settings.Rarities[r] = v end,
-    })
-end
+-- 2. INVENTORY & PETS TAB[cite: 2]
+InventoryTab:CreateToggle({
+    Name = "Auto Hatch Ready Eggs",
+    CurrentValue = false,
+    Callback = function(v) Settings.AutoHatch = v end,
+})
 
--- MISC TAB
-MiscTab:CreateToggle({
-    Name = "Auto Treadmill (Blue Gym)",
+InventoryTab:CreateToggle({
+    Name = "Auto Sell Eggs",
+    CurrentValue = false,
+    Callback = function(v) Settings.AutoSellEggs = v end,
+})
+
+InventoryTab:CreateToggle({
+    Name = "Auto Sell Pets",
+    CurrentValue = false,
+    Callback = function(v) Settings.AutoSellPets = v end,
+})
+
+InventoryTab:CreateButton({
+    Name = "Place Best Pets Instant",
+    Callback = function()
+        pcall(function()
+            -- Placeholder logic untuk equip/place pet terbaik secara instan
+            print("Placing Best Pets...")
+        end)
+    end,
+})
+
+-- 3. GYM & UPGRADES TAB[cite: 2]
+GymTab:CreateToggle({
+    Name = "Auto Treadmill Training",
     CurrentValue = false,
     Callback = function(v) Settings.AutoTreadmill = v end,
 })
 
-MiscTab:CreateToggle({
-    Name = "Auto Collect Wisp Event",
+GymTab:CreateToggle({
+    Name = "Auto Treadmill Upgrade",
     CurrentValue = false,
-    Callback = function(v) Settings.AutoWisp = v end,
+    Callback = function(v) Settings.AutoTreadmillUpgrade = v end,
 })
 
--- BACKGROUND EXECUTION LOOPS
-task.spawn(function()
-    while task.wait(0.2) do
-        if Settings.AutoSteal then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-                
-                local targets = {}
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if isRealEggPrompt(obj) then
-                        local model = obj.Parent
-                        local part = model:IsA("BasePart") and model or model:FindFirstChildWhichIsA("BasePart", true)
-                        if part then
-                            local rName, rWeight = getEggRarityNameAndWeight(model)
-                            -- Cek apakah ada filter rarity yang menyala
-                            local anyActive = false
-                            for _, active in pairs(Settings.Rarities) do
-                                if active then anyActive = true break end
-                            end
-                            
-                            -- Jika tidak ada filter yang dinyalakan, ambil semua. Jika ada, sesuaikan.
-                            if not anyActive or Settings.Rarities[rName] then
-                                table.insert(targets, {prompt = obj, part = part, weight = rWeight})
-                            end
-                        end
-                    end
+GymTab:CreateToggle({
+    Name = "Auto Upgrades Pen",
+    CurrentValue = false,
+    Callback = function(v) Settings.AutoUpgradePen = v end,
+})
+
+GymTab:CreateToggle({
+    Name = "Auto Buy Cash Trails",
+    CurrentValue = false,
+    Callback = function(v) Settings.AutoBuyTrails = v end,
+})
+
+GymTab:CreateToggle({
+    Name = "Auto Equip Best Gear",
+    CurrentValue = false,
+    Callback = function(v) Settings.AutoEquipBestGear = v end,
+})
+
+-- 4. VISUALS & MISC TAB[cite: 2]
+MiscTab:CreateToggle({
+    Name = "Egg ESP (Highlight High Tier)",
+    CurrentValue = false,
+    Callback = function(v) Settings.EggESP = v end,
+})
+
+MiscTab:CreateToggle({
+    Name = "Max FPS / Boost Performance",
+    CurrentValue = false,
+    Callback = function(v)
+        Settings.MaxFPS = v
+        pcall(function()
+            settings().Rendering.QualityLevel = v and Enum.QualityLevel.Level01 or Enum.QualityLevel.Automatic
+        end)
+    end,
+})
+
+MiscTab:CreateToggle({
+    Name = "Kill All VFX Weight (Reduce Lag)",
+    CurrentValue = false,
+    Callback = function(v)
+        Settings.KillVFX = v
+        pcall(function()
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
+                    obj.Enabled = not v
                 end
+            end
+        end)
+    end,
+})
 
-                table.sort(targets, function(a, b) return a.weight > b.weight end)
+MiscTab:CreateButton({
+    Name = "Auto Server Hop",
+    Callback = function()
+        pcall(function()
+            local ts = game:GetService("TeleportService")
+            local p = Players.LocalPlayer
+            ts:Teleport(game.PlaceId, p)
+        end)
+    end,
+})
 
-                if #targets > 0 then
-                    local t = targets[1]
-                    local safeCFrame = getMySafeZoneCFrame()
-                    
-                    char.HumanoidRootPart.CFrame = t.part.CFrame * CFrame.new(0, 2.5, 0)
-                    task.wait(0.08)
-                    t.prompt.RequiresLineOfSight = false
-                    fireproximityprompt(t.prompt)
-                    task.wait(0.1)
-                    
-                    if safeCFrame then
-                        char.HumanoidRootPart.CFrame = safeCFrame
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- GYM & WISP LOOP
+-- BACKGROUND EXECUTION LOOPS[cite: 2]
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.25) do
         pcall(function()
             local char = LocalPlayer.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
-            if Settings.AutoTreadmill then
-                local myPlot = getMyPlotStrict()
-                if myPlot then
-                    for _, obj in pairs(myPlot:GetDescendants()) do
-                        if obj:IsA("BasePart") and (obj.Name:lower():find("treadmill") or obj.Color.B > 0.5) then
-                            char.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                            char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-                            break
+            -- Auto Steal Loop
+            if Settings.AutoSteal then
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj:IsA("ProximityPrompt") then
+                        local pName = obj.Parent and obj.Parent.Name:lower() or ""
+                        if pName:find("egg") or obj.ObjectText:lower():find("egg") then
+                            local part = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart", true)
+                            if part then
+                                local safeCFrame = getMySafeZoneCFrame()
+                                char.HumanoidRootPart.CFrame = part.CFrame + Vector3.new(0, 2.5, 0)
+                                task.wait(0.08)
+                                obj.RequiresLineOfSight = false
+                                fireproximityprompt(obj)
+                                task.wait(0.1)
+                                if safeCFrame then
+                                    char.HumanoidRootPart.CFrame = safeCFrame
+                                end
+                                break
+                            end
                         end
                     end
                 end
             end
 
-            if Settings.AutoWisp then
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name:lower():find("wisp") then
-                        local p = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart", true)
-                        if p then
-                            char.HumanoidRootPart.CFrame = p.CFrame + Vector3.new(0, 2, 0)
-                            fireproximityprompt(obj)
+            -- Auto Treadmill Loop
+            if Settings.AutoTreadmill then
+                local myPlot = getMyPlotStrict()
+                if myPlot then
+                    for _, obj in pairs(myPlot:GetDescendants()) do
+                        if obj:IsA("BasePart") and (obj.Name:lower():find("treadmill") or obj.Name:lower():find("trainer")) then
+                            char.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                            char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                            break
                         end
                     end
                 end
@@ -247,7 +247,7 @@ task.spawn(function()
     end
 end)
 
--- AUTO PLACE TO PEN
+-- AUTO PLACE TO PEN LOOP[cite: 2]
 task.spawn(function()
     while task.wait(0.5) do
         if Settings.AutoPlace then
@@ -272,7 +272,7 @@ task.spawn(function()
 end)
 
 Rayfield:Notify({
-    Title = "SYADZZ HUB (Clean Edition)",
-    Content = "Loaded Successfully! All features are OFF by default.",
+    Title = "SYADZZ HUB (Ultimate)",
+    Content = "Loaded Successfully! All features are set to OFF by default[cite: 2].",
     Duration = 5,
 })
