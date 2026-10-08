@@ -1,5 +1,5 @@
 -- ==================================================
--- 🚀 SYADZZ HUB — DATABASE SCANNER & ACCURATE AUTO STEAL
+-- 🚀 SYADZZ HUB — ENCHANTED & PORTAL PROOF AUTO STEAL
 -- ⚠️ AUTO TREADMILL TIDAK DIUBAH SEKALI PUN ⚠️
 -- ==================================================
 
@@ -15,14 +15,14 @@ pcall(function()
 end)
 
 local Kavo = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Kavo.CreateLib("SYADZZ HUB 🥚 | Steal an Egg Database Edition", "Midnight")
+local Window = Kavo.CreateLib("SYADZZ HUB 🥚 | Anti-Portal Auto Steal", "Midnight")
 
 local Settings = {
     AutoSteal = false,
     AutoTreadmill = false,
     SavedBaseCFrame = nil,
     SavedTreadmillCFrame = nil,
-    StealDelay = 0.1,
+    StealDelay = 0.15,
     Rarities = {
         ["Infinity"] = true,
         ["Celestial"] = true,
@@ -90,22 +90,19 @@ local function getExactTreadmillBelt()
 end
 
 --------------------------------------------------------------------
--- 🔍 PEMBACA DATABASE LOKAL (INTERNAL WORKSPACE SCANNER)
+-- 🔍 PEMBACA DATABASE LOKAL & DETEKSI RARITY
 --------------------------------------------------------------------
 local function detectEggData(model)
     local rarityName = "Common"
     
-    -- 1. Pembacaan via Attributes asli game
     local attrRarity = model:GetAttribute("Rarity") or (model.Parent and model.Parent:GetAttribute("Rarity"))
     if attrRarity then
         rarityName = tostring(attrRarity)
     else
-        -- 2. Pembacaan via struktur Objek & Child Value
         local rarityVal = model:FindFirstChild("Rarity", true) or model:FindFirstChild("Tier", true)
         if rarityVal and (rarityVal:IsA("StringValue") or rarityVal:IsA("TextLabel")) then
             rarityName = tostring(rarityVal.Value or rarityVal.Text)
         else
-            -- 3. Fallback pencarian String dari nama folder/model
             local rawStr = (model.Name .. " " .. model:GetFullName()):lower()
             if rawStr:find("infinity") then rarityName = "Infinity"
             elseif rawStr:find("celestial") then rarityName = "Celestial"
@@ -121,7 +118,6 @@ local function detectEggData(model)
         end
     end
 
-    -- Normalisasi format teks Rarity
     for targetRarity, _ in pairs(RarityWeight) do
         if rarityName:lower():find(targetRarity:lower()) then
             return targetRarity, RarityWeight[targetRarity]
@@ -194,7 +190,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- ⚡ AUTO STEAL EXECUTION LOOP
+-- ⚡ AUTO STEAL EXECUTION LOOP (PROTEKSI KETAT ANTI DUNIA LAIN)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -218,41 +214,57 @@ task.spawn(function()
 
         local targets = {}
 
-        -- Poin 1: Pindai ProximityPrompt di seluruh dunia
         for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
                 local parent = prompt.Parent
                 if parent then
-                    local rName, weight = detectEggData(parent)
+                    local fullText = (prompt.Name .. " " .. prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parent.Name .. " " .. parent:GetFullName()):lower()
 
-                    if Settings.Rarities[rName] then
-                        local part = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
-                        if part then
-                            table.insert(targets, {
-                                prompt = prompt,
-                                part = part,
-                                rarity = rName,
-                                weight = weight
-                            })
+                    -- 🚫 BLACKLIST TOTAL DARI PORTAL, AREA LAIN, DAN ENCHANTED ZONES
+                    if fullText:find("portal") or fullText:find("enter") or fullText:find("teleport") or 
+                       fullText:find("fuse") or fullText:find("world") or fullText:find("enchanted") or 
+                       fullText:find("angel") or fullText:find("demon") or fullText:find("warp") or 
+                       fullText:find("travel") or fullText:find("dimension") or fullText:find("gate") or 
+                       fullText:find("machine") or fullText:find("spin") or fullText:find("craft") or 
+                       fullText:find("door") or fullText:find("zone") then
+                        continue
+                    end
+
+                    -- ✅ FILTER UTAMA: Hanya Menerima Prompt Murni Telur
+                    local isEggPrompt = fullText:find("egg") or fullText:find("telur") or fullText:find("steal") or fullText:find("take") or fullText:find("grab") or fullText:find("collect")
+
+                    if isEggPrompt then
+                        local rName, weight = detectEggData(parent)
+
+                        if Settings.Rarities[rName] then
+                            local part = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
+                            if part then
+                                table.insert(targets, {
+                                    prompt = prompt,
+                                    part = part,
+                                    rarity = rName,
+                                    weight = weight
+                                })
+                            end
                         end
                     end
                 end
             end
         end
 
-        -- Poin 2: Urutkan target berdasarkan Rarity tertinggi
+        -- Urutkan target dari Rarity tertinggi
         table.sort(targets, function(a, b) return a.weight > b.weight end)
 
-        -- Poin 3: Eksekusi Teleportasi & Pengambilan Instant
+        -- Eksekusi
         if #targets > 0 then
             local bestTarget = targets[1]
             local pos = bestTarget.part.Position
 
-            -- Teleport tepat di atas lokasi telur
-            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2.5, 0))
+            -- Teleportasi tepat di lokasi telur
+            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2.2, 0))
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            task.wait(0.05)
+            task.wait(0.08)
 
             -- Bypass interaksi
             bestTarget.prompt.HoldDuration = 0
@@ -263,9 +275,9 @@ task.spawn(function()
                 fireproximityprompt(bestTarget.prompt)
             end)
 
-            task.wait(0.05)
+            task.wait(0.08)
 
-            -- Kembalikan posisi karakter
+            -- Kembalikan posisi karakter ke lokasi semula
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = returnPoint
                 char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
