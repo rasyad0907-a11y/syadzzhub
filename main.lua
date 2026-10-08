@@ -1,4 +1,4 @@
---// SYADZZ HUB - ULTRA ACCURATE FIXED EDITION (STEAL AN EGG)
+--// SYADZZ HUB - STABLE RESTORED EDITION (STEAL AN EGG)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -7,8 +7,8 @@ local LocalPlayer = Players.LocalPlayer
 
 -- 1. CLEANUP GUI LAMA
 pcall(function()
-    if CoreGui:FindFirstChild("SyadzzUltraHub") then
-        CoreGui.SyadzzUltraHub:Destroy()
+    if CoreGui:FindFirstChild("SyadzzStableHub") then
+        CoreGui.SyadzzStableHub:Destroy()
     end
 end)
 
@@ -16,8 +16,8 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg 🥚 [Ultra Accurate]",
-    LoadingTitle = "Loading Ultra Hub...",
+    Name = "SYADZZ HUB | Steal an Egg 🥚 [Stable Edition]",
+    LoadingTitle = "Loading Stable Hub...",
     LoadingSubtitle = "by Syadholicc",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
@@ -38,12 +38,10 @@ local Settings = {
         ["Mythic"] = false,
         ["Legendary"] = false,
         ["Epic"] = false,
-        ["Rare"] = false,
-        ["Uncommon"] = false
+        ["Rare"] = false
     }
 }
 
--- BOBOT RARITAS (PRIORITAS TERTINGGI UNTUK SULTAN)
 local RarityWeight = {
     ["Divine"] = 1000,
     ["Eternal"] = 900,
@@ -52,11 +50,9 @@ local RarityWeight = {
     ["Mythic"] = 600,
     ["Legendary"] = 500,
     ["Epic"] = 400,
-    ["Rare"] = 300,
-    ["Uncommon"] = 200
+    ["Rare"] = 300
 }
 
--- DAFTAR ZONA RESMI GAME
 local GameZones = {
     "All (none)",
     "Forest",
@@ -73,24 +69,10 @@ local GameZones = {
     "Enchanted Forest"
 }
 
--- HELPER: DETEKSI RARITAS TELUR SECARA AKURAT (NAMA, ATRIBUT, & VALUE)
+-- HELPER: DETEKSI RARITAS
 local function getEggRarityNameAndWeight(eggObj)
     if not eggObj then return "Rare", 300 end
     local fullText = eggObj.Name:lower()
-    
-    -- Cek Attribute jika ada
-    for _, attr in pairs(eggObj:GetAttributes()) do
-        fullText = fullText .. " " .. tostring(attr):lower()
-    end
-    
-    -- Cek Child Value (seperti StringValue/IntValue bernama Rarity/Tier)
-    for _, child in pairs(eggObj:GetChildren()) do
-        if child.Name:lower():find("rarity") or child.Name:lower():find("tier") then
-            fullText = fullText .. " " .. tostring(child.Value):lower()
-        end
-    end
-
-    -- Cek Parent Hierarchy
     local curr = eggObj.Parent
     for i = 1, 4 do
         if curr then
@@ -98,7 +80,6 @@ local function getEggRarityNameAndWeight(eggObj)
             curr = curr.Parent
         end
     end
-    
     for rarity, weight in pairs(RarityWeight) do
         if fullText:find(rarity:lower()) then
             return rarity, weight
@@ -115,23 +96,7 @@ local function isRealEggPrompt(prompt)
     return false
 end
 
--- HELPER: CEK AREA / ZONA SECARA FLEKSIBEL
-local function matchArea(eggObj, selectedArea)
-    if selectedArea == "All (none)" or selectedArea == "All" then return true end
-    local target = selectedArea:lower():gsub("%s+", "")
-    local curr = eggObj
-    for i = 1, 6 do
-        if curr then
-            local cName = curr.Name:lower():gsub("%s+", "")
-            if cName:find(target) then
-                return true
-            end
-            curr = curr.Parent
-        end
-    end
-    return false
-end
-
+-- PENCARIAN PLOT / BASE SENDIRI YANG AKURAT
 local function getMyPlotStrict()
     local possibleFolders = {"Plots", "Bases", "PlotFolder", "PlayerPlots", "Base"}
     for _, fName in ipairs(possibleFolders) do
@@ -155,13 +120,6 @@ end
 local function getMySafeZoneCFrame()
     local myPlot = getMyPlotStrict()
     if myPlot then
-        for _, obj in pairs(myPlot:GetDescendants()) do
-            local oName = obj.Name:lower()
-            if oName:find("safe") or oName:find("spawn") or oName:find("zona") then
-                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                if part then return part.CFrame + Vector3.new(0, 3, 0) end
-            end
-        end
         return myPlot:GetPivot() + Vector3.new(0, 3, 0)
     end
     return LocalPlayer.Character and LocalPlayer.Character.HumanoidRootPart.CFrame
@@ -169,12 +127,12 @@ end
 
 -- TABS CREATION
 local FarmTab = Window:CreateTab("Auto Farm", 4483362458)
-local FilterTab = Window:CreateTab("Filters & Rarity", 4483362458)
+local FilterTab = Window:CreateTab("Filters & Zone", 4483362458)
 local GymTab = Window:CreateTab("Gym & Misc", 4483362458)
 
 -- 1. FARM TAB
 FarmTab:CreateToggle({
-    Name = "Auto Steal Egg (Fixed Teleport & Grab)",
+    Name = "Auto Steal Egg (Teleport Mode)",
     CurrentValue = false,
     Callback = function(v) Settings.AutoSteal = v end,
 })
@@ -185,7 +143,7 @@ FarmTab:CreateToggle({
     Callback = function(v) Settings.AutoPlace = v end,
 })
 
--- 2. FILTER TAB (ZONA & RARITY SULTAN)
+-- 2. FILTER TAB
 FilterTab:CreateDropdown({
     Name = "Filter by Zone Area",
     Options = GameZones,
@@ -193,11 +151,11 @@ FilterTab:CreateDropdown({
     Callback = function(opt) Settings.SelectedArea = opt[1] end,
 })
 
-FilterTab:CreateSection("Target Rarity Filters (Divine, Eternal, Secret, etc.)")
-local raritiesList = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare", "Uncommon"}
+FilterTab:CreateSection("Target Rarity Toggles")
+local raritiesList = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare"}
 for _, r in ipairs(raritiesList) do
     FilterTab:CreateToggle({
-        Name = "Target Rarity: " .. r,
+        Name = "Target: " .. r,
         CurrentValue = false,
         Callback = function(v) Settings.Rarities[r] = v end,
     })
@@ -205,7 +163,7 @@ end
 
 -- 3. GYM TAB
 GymTab:CreateToggle({
-    Name = "Auto Treadmill (Gym Teleport)",
+    Name = "Auto Treadmill (Base Gym)",
     CurrentValue = false,
     Callback = function(v) Settings.AutoTreadmill = v end,
 })
@@ -216,9 +174,9 @@ GymTab:CreateToggle({
     Callback = function(v) Settings.AutoWisp = v end,
 })
 
--- BACKGROUND EXECUTION: AUTO STEAL DENGAN TELEPORT & PROMPT GRAB FIX
+-- BACKGROUND: AUTO STEAL DENGAN TELEPORT PAS DI TELUR
 task.spawn(function()
-    while task.wait(0.25) do
+    while task.wait(0.2) do
         if Settings.AutoSteal then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -233,46 +191,51 @@ task.spawn(function()
                             local rName, rWeight = getEggRarityNameAndWeight(model)
                             
                             -- Cek Filter Area
-                            local areaOk = matchArea(model, Settings.SelectedArea)
+                            local areaMatch = true
+                            if Settings.SelectedArea ~= "All (none)" then
+                                local hierarchy = ""
+                                local curr = model
+                                for i = 1, 5 do
+                                    if curr then
+                                        hierarchy = hierarchy .. " " .. curr.Name:lower()
+                                        curr = curr.Parent
+                                    end
+                                end
+                                if not hierarchy:find(Settings.SelectedArea:lower():gsub("%s+", "")) then
+                                    areaMatch = false
+                                end
+                            end
                             
-                            -- Cek Filter Rarity (Jika ada yang nyala, ikuti. Kalau mati semua, ambil semua)
+                            -- Cek Filter Rarity
                             local anyActive = false
                             for _, active in pairs(Settings.Rarities) do
                                 if active then anyActive = true break end
                             end
                             
-                            local rarityOk = not anyActive or Settings.Rarities[rName]
+                            local rarityMatch = not anyActive or Settings.Rarities[rName]
 
-                            if areaOk and rarityOk then
+                            if areaMatch and rarityMatch then
                                 table.insert(targets, {prompt = obj, part = part, weight = rWeight})
                             end
                         end
                     end
                 end
 
-                -- Urutkan berdasarkan bobot rarity tertinggi
                 table.sort(targets, function(a, b) return a.weight > b.weight end)
 
                 if #targets > 0 then
                     local t = targets[1]
                     local safeCFrame = getMySafeZoneCFrame()
                     
-                    -- 1. Teleport ke Telur
-                    char.HumanoidRootPart.CFrame = t.part.CFrame * CFrame.new(0, 2, 0)
+                    -- Teleport persis di atas telur tanpa keluar batas
+                    char.HumanoidRootPart.CFrame = t.part.CFrame + Vector3.new(0, 2.5, 0)
+                    task.wait(0.1)
+                    
+                    t.prompt.MaxActivationDistance = 999
+                    t.prompt.RequiresLineOfSight = false
+                    fireproximityprompt(t.prompt)
                     task.wait(0.15)
                     
-                    -- 2. Paksa Ambil Telur (Fire Prompt Berulang agar Pasti Kebawa)
-                    pcall(function()
-                        t.prompt.MaxActivationDistance = 999
-                        t.prompt.RequiresLineOfSight = false
-                        fireproximityprompt(t.prompt)
-                        task.wait(0.05)
-                        fireproximityprompt(t.prompt)
-                    end)
-                    
-                    task.wait(0.2)
-                    
-                    -- 3. Teleport Kembali ke Safe Zone Base
                     if safeCFrame then
                         char.HumanoidRootPart.CFrame = safeCFrame
                     end
@@ -282,18 +245,16 @@ task.spawn(function()
     end
 end)
 
--- BACKGROUND EXECUTION: AUTO TREADMILL & WISP TELEPORT
+-- BACKGROUND: AUTO TREADMILL & WISP
 task.spawn(function()
     while task.wait(0.3) do
         pcall(function()
             local char = LocalPlayer.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
-            -- Auto Treadmill Teleport
             if Settings.AutoTreadmill then
                 local myPlot = getMyPlotStrict()
                 local targetTreadmill = nil
-                
                 if myPlot then
                     for _, obj in pairs(myPlot:GetDescendants()) do
                         if obj:IsA("BasePart") then
@@ -312,7 +273,6 @@ task.spawn(function()
                 end
             end
 
-            -- Auto Wisp Teleport
             if Settings.AutoWisp then
                 for _, obj in pairs(Workspace:GetDescendants()) do
                     if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name:lower():find("wisp") then
@@ -353,7 +313,7 @@ task.spawn(function()
 end)
 
 Rayfield:Notify({
-    Title = "SYADZZ HUB (Ultra Accurate)",
-    Content = "Loaded Successfully! Teleport, Zone, & Rarity Filters Fixed.",
+    Title = "SYADZZ HUB (Stable)",
+    Content = "Successfully Loaded! Teleport & Filters Restored.",
     Duration = 5,
 })
