@@ -1,12 +1,12 @@
 -- ==================================================
--- SYADZZ HUB | Sumber: github.com/rasyad0907-a11y/syadzzhub
--- Langsung Salin & Jalankan — Tidak Pakai Link Lagi
--- Auto Treadmill TETAP UTUH
+-- SYADZZ HUB | AUTO STEAL DIPERBAIKI
+-- Treadmill TETAP UTUH
 -- ==================================================
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
@@ -31,6 +31,7 @@ local Settings = {
     AutoTreadmill = false,
     SelectedArea = "All (none)",
     SavedBaseCFrame = nil,
+    SavedTreadmillCFrame = nil,
     Rarities = {
         ["Divine"] = false,
         ["Eternal"] = false,
@@ -109,7 +110,7 @@ local function getExactTreadmillBelt()
 end
 
 --------------------------------------------------------------------
--- DETEKSI RARITY & AREA
+-- DETEKSI RARITY
 --------------------------------------------------------------------
 local function getEggRarityData(eggModel)
     if not eggModel then return "Rare", 300 end
@@ -144,7 +145,6 @@ local function getEggRarityData(eggModel)
     elseif fullText:find("rare") or fullText:find("langka") or fullText:find("flame") then
         return "Rare", 300
     end
-
     return "Rare", 300
 end
 
@@ -176,23 +176,16 @@ FarmTab:CreateToggle({
     Callback = function(v)
         Settings.AutoSteal = v
         if v then
-            task.wait(0.2)
             local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not char then
+                Rayfield:Notify({Title = "⚠️ Tunggu", Content = "Karakter belum muncul!", Duration = 3})
+                Settings.AutoSteal = false
+                return
+            end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
             if hrp then
                 Settings.SavedBaseCFrame = hrp.CFrame
-                Rayfield:Notify({
-                    Title = "✅ Posisi Disimpan",
-                    Content = "Titik aman dikunci! Siap ambil telur.",
-                    Duration = 3
-                })
-            else
-                Rayfield:Notify({
-                    Title = "⚠️ Belum Siap",
-                    Content = "Karakter belum termuat, coba lagi sebentar.",
-                    Duration = 3
-                })
-                Settings.AutoSteal = false
+                Rayfield:Notify({Title = "✅ Siap", Content = "Base disimpan! Mulai mencari telur...", Duration = 3})
             end
         end
     end,
@@ -212,7 +205,7 @@ FilterTab:CreateDropdown({
     Callback = function(opt) Settings.SelectedArea = opt[1] end,
 })
 
-FilterTab:CreateSection("Prioritas — yang lebih tinggi diambil duluan")
+FilterTab:CreateSection("Prioritas — Divine > Eternal > Secret > dst")
 local raritiesList = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare"}
 for _, r in ipairs(raritiesList) do
     FilterTab:CreateToggle({
@@ -226,11 +219,14 @@ end
 GymTab:CreateToggle({
     Name = "Auto Treadmill",
     CurrentValue = false,
-    Callback = function(v) Settings.AutoTreadmill = v end,
+    Callback = function(v)
+        Settings.AutoTreadmill = v
+        if not v then Settings.SavedTreadmillCFrame = nil end
+    end,
 })
 
 --------------------------------------------------------------------
--- LOOP AUTO TREADMILL
+-- LOOP AUTO TREADMILL — TETAP UTUH
 --------------------------------------------------------------------
 local cachedTreadmillCFrame = nil
 task.spawn(function()
@@ -243,14 +239,11 @@ task.spawn(function()
                 if not cachedTreadmillCFrame then
                     cachedTreadmillCFrame = getExactTreadmillBelt()
                     if cachedTreadmillCFrame then
-                        Rayfield:Notify({
-                            Title = "✅ Treadmill Ditemukan",
-                            Content = "Karpet kamu sudah terkunci!",
-                            Duration = 2
-                        })
+                        Settings.SavedTreadmillCFrame = cachedTreadmillCFrame
+                        Rayfield:Notify({Title = "✅ Treadmill Ditemukan", Content = "Balik ke sini setelah ambil telur!", Duration = 2.5})
                     end
                 end
-                if cachedTreadmillCFrame then
+                if cachedTreadmillCFrame and not Settings.AutoSteal then
                     hrp.CFrame = cachedTreadmillCFrame
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
@@ -258,27 +251,39 @@ task.spawn(function()
             end)
         else
             cachedTreadmillCFrame = nil
+            Settings.SavedTreadmillCFrame = nil
         end
     end
 end)
 
 --------------------------------------------------------------------
--- LOOP AUTO STEAL
+-- LOOP AUTO STEAL — DIPERBAIKI AGAR BERJALAN
 --------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(0.5) do
-        if not Settings.AutoSteal or not Settings.SavedBaseCFrame then
+    while task.wait(0.6) do
+        if not Settings.AutoSteal then
             task.wait(0.2)
+            continue
+        end
+        if not Settings.SavedBaseCFrame then
+            Rayfield:Notify({Title = "⚠️ Nyalakan Ulang", Content = "Berdiri di base lalu nyalakan lagi!", Duration = 3})
+            task.wait(1)
             continue
         end
 
         pcall(function()
             local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
             if not hrp then return end
 
-            local safeReturn = Settings.SavedBaseCFrame
+            -- Tempat pulang
+            local returnPoint = Settings.SavedBaseCFrame
+            if Settings.AutoTreadmill and Settings.SavedTreadmillCFrame then
+                returnPoint = Settings.SavedTreadmillCFrame
+            end
 
+            -- Rarity yang dipilih
             local activeRarities = {}
             local anySelected = false
             for rName, enabled in pairs(Settings.Rarities) do
@@ -288,26 +293,36 @@ task.spawn(function()
                 end
             end
 
+            -- 🔍 CARI TELUR — DIPERLUAS DETEKSINYA
             local validEggs = {}
             for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("ProximityPrompt") then
                     local txt = (obj.Name .. " " .. obj.ActionText .. " " .. obj.ObjectText):lower()
 
-                    if txt:find("wisp") or txt:find("machine") or txt:find("shop") or txt:find("quest") then
+                    -- Lewati yang BUKAN telur
+                    if txt:find("wisp") or txt:find("machine") or txt:find("shop") or txt:find("quest") or txt:find("upgrade") then
                         continue
                     end
+                    -- Wajib ada kata telur
                     if not (txt:find("egg") or txt:find("telur") or txt:find("steal") or txt:find("take")) then
                         continue
                     end
 
+                    -- Cari bagian fisik telur
                     local eggModel = obj.Parent
-                    local eggPart = eggModel:IsA("BasePart") and eggModel
-                        or eggModel:FindFirstChildWhichIsA("BasePart", true)
-
-                    if not eggPart or eggPart.Position.Y >= 150 then
-                        continue
+                    local eggPart = nil
+                    if eggModel:IsA("BasePart") then
+                        eggPart = eggModel
+                    else
+                        eggPart = eggModel:FindFirstChildWhichIsA("BasePart", true)
                     end
 
+                    if not eggPart then continue end
+
+                    -- Jangan ke langit
+                    if eggPart.Position.Y >= 140 then continue end
+
+                    -- Cek rarity & area
                     local rName, rWeight = getEggRarityData(eggModel)
                     local zoneOk = isZoneMatched(eggModel, Settings.SelectedArea)
                     local rarityOk = not anySelected or activeRarities[rName]
@@ -315,7 +330,7 @@ task.spawn(function()
                     if zoneOk and rarityOk then
                         table.insert(validEggs, {
                             prompt = obj,
-                            part   = eggPart,
+                            part = eggPart,
                             rarity = rName,
                             weight = rWeight
                         })
@@ -323,47 +338,65 @@ task.spawn(function()
                 end
             end
 
+            -- Urutkan prioritas
             table.sort(validEggs, function(a, b)
                 return a.weight > b.weight
             end)
 
+            -- Kalau ketemu
             if #validEggs > 0 then
                 local target = validEggs[1]
 
-                hrp.AssemblyLinearVelocity  = Vector3.zero
+                Rayfield:Notify({
+                    Title = "🥚 Ketemu: " .. target.rarity,
+                    Content = "Sedang pergi ambil...",
+                    Duration = 2
+                })
+
+                -- Pindah ke telur — dipastikan berjalan
+                hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
                 task.wait()
-                hrp.CFrame = target.part.CFrame * CFrame.new(0, 3, 0)
+                hrp.CFrame = target.part.CFrame * CFrame.new(0, 2, 0) -- Lebih dekat
 
-                task.wait(0.5)
+                task.wait(0.6) -- Tunggu posisi terdaftar
 
+                -- Ambil telur
                 target.prompt.RequiresLineOfSight = false
-                target.prompt.MaxActivationDistance = 20
+                target.prompt.MaxActivationDistance = 25
                 fireproximityprompt(target.prompt)
 
                 Rayfield:Notify({
-                    Title = "🥚 Diambil: " .. target.rarity,
-                    Content = "Prioritas tertinggi dipilih",
-                    Duration = 2.5
+                    Title = "✅ Diambil: " .. target.rarity,
+                    Content = "Kembali ke posisi...",
+                    Duration = 2
                 })
 
                 task.wait(0.5)
 
-                hrp.AssemblyLinearVelocity  = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                hrp.CFrame = safeReturn
-                task.wait(0.2)
+                -- Balik
                 hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = returnPoint
+                task.wait(0.3)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            else
+                -- Tidak ketemu
+                Rayfield:Notify({
+                    Title = "🔍 Mencari Telur...",
+                    Content = anySelected and "Filter: " .. next(activeRarities) or "Semua zona",
+                    Duration = 1.5
+                })
             end
         end)
     end
 end)
 
 --------------------------------------------------------------------
--- LOOP AUTO PLACE
+-- AUTO PLACE
 --------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(0.4) do
+    while task.wait(0.5) do
         if not Settings.AutoPlace then
             task.wait(0.2)
             continue
@@ -377,7 +410,7 @@ task.spawn(function()
                     local txt = (obj.ActionText .. " " .. obj.ObjectText):lower()
                     if txt:find("place") or txt:find("taruh") or txt:find("pen") or txt:find("nest") then
                         fireproximityprompt(obj)
-                        task.wait(0.6)
+                        task.wait(0.7)
                         break
                     end
                 end
@@ -387,7 +420,7 @@ task.spawn(function()
 end)
 
 Rayfield:Notify({
-    Title = "✅ Siap Digunakan!",
-    Content = "Syadzz Hub Dimuat — Treadmill Tetap Utuh!",
+    Title = "✅ DIPERBAIKI & SIAP",
+    Content = "Auto Steal sudah diperbaiki! Treadmill tetap utuh.",
     Duration = 4
 })
