@@ -1,9 +1,9 @@
---// SYADZZ HUB | TERINSPIRASI NASI RENDANG HUB
+--// SYADZZ HUB | DIPERBAIKI — Error Sudah Hilang
 -- Auto Treadmill TETAP UTUH TIDAK DIUBAH
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
@@ -17,7 +17,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "SYADZZ HUB | Steal an Egg 🥚",
     LoadingTitle = "Memuat Hub...",
-    LoadingSubtitle = "by Syadholicc | Nasi Rendang Style",
+    LoadingSubtitle = "by Syadholicc",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
 })
@@ -32,7 +32,7 @@ local Settings = {
     SelectedArea = "All (none)",
     SavedBaseCFrame = nil,
     SavedTreadmillCFrame = nil,
-    StealSpeed = 0.8, -- 80% seperti saran Nasi Rendang
+    StealSpeed = 0.8,
     MaxDistance = 500,
     IgnoreYAbove = 120,
     ForceSpeed = 0,
@@ -341,7 +341,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- LOOP AUTO STEAL — LENGKAP
+-- LOOP AUTO STEAL — DIPERBAIKI
 --------------------------------------------------------------------
 task.spawn(function()
     while task.wait(Settings.ForceSpeed > 0 and Settings.ForceSpeed or Settings.StealSpeed) do
@@ -355,7 +355,6 @@ task.spawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then return end
 
-            -- Tempat pulang: treadmill kalau aktif
             local returnPoint = Settings.SavedBaseCFrame
             if Settings.AutoTreadmill and Settings.SavedTreadmillCFrame then
                 returnPoint = Settings.SavedTreadmillCFrame
@@ -388,7 +387,6 @@ task.spawn(function()
                     local eggPart = eggModel:IsA("BasePart") and eggModel
                         or eggModel:FindFirstChildWhichIsA("BasePart", true)
 
-                    -- TIDAK KE LANGIT
                     if not eggPart then continue end
                     if eggPart.Position.Y >= Settings.IgnoreYAbove or eggPart.Position.Y < -20 then
                         continue
@@ -413,16 +411,14 @@ task.spawn(function()
                 end
             end
 
-            -- Urutkan prioritas
             table.sort(validEggs, function(a, b)
                 return a.weight > b.weight
             end)
 
-            -- Egg Predictor notifikasi
             if Settings.EggPredictor and #validEggs > 0 then
                 Rayfield:Notify({
-                    Title = "🔮 Telur Terdekat",
-                    Content = validEggs[1].rarity .. " — siap diambil",
+                    Title = "🔮 Telur Berikutnya",
+                    Content = validEggs[1].rarity,
                     Duration = 1.5
                 })
             end
@@ -430,7 +426,6 @@ task.spawn(function()
             if #validEggs > 0 then
                 local target = validEggs[1]
 
-                -- Pergi ke telur
                 hrp.AssemblyLinearVelocity  = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
                 task.wait()
@@ -438,7 +433,6 @@ task.spawn(function()
 
                 task.wait(0.5)
 
-                -- Ambil
                 target.prompt.RequiresLineOfSight = false
                 target.prompt.MaxActivationDistance = 20
                 fireproximityprompt(target.prompt)
@@ -451,7 +445,6 @@ task.spawn(function()
 
                 task.wait(0.5)
 
-                -- BALIK KE TREADMILL / BASE
                 hrp.AssemblyLinearVelocity  = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
                 hrp.CFrame = returnPoint
@@ -490,37 +483,38 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- GODMODE & FLY
+-- GODMODE & FLY — DIPERBAIKI
 --------------------------------------------------------------------
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChild("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not char then return end
+            local hum = char:FindFirstChild("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
             if not hum or not hrp then return end
 
             -- Godmode
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, not Settings.Godmode)
-            if Settings.Godmode then
-                hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-            end
 
             -- Fly
             if Settings.FlyMode then
                 hum.PlatformStand = true
-                hrp.AssemblyLinearVelocity = Vector3.new(
-                    (UserInputService:IsKeyDown(Enum.KeyCode.D) and 20 or 0) + (UserInputService:IsKeyDown(Enum.KeyCode.A) and -20 or 0),
-                    (UserInputService:IsKeyDown.Space and 15 or 0) + (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and -15 or 0),
-                    (UserInputService:IsKeyDown(Enum.KeyCode.S) and 20 or 0) + (UserInputService:IsKeyDown(Enum.KeyCode.W) and -20 or 0)
-                )
+                local vx, vy, vz = 0, 0, 0
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then vx = 20 end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then vx = -20 end
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then vz = -20 end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then vz = 20 end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vy = 15 end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then vy = -15 end
+                hrp.AssemblyLinearVelocity = Vector3.new(vx, vy, vz)
             end
         end)
     end
 end)
 
 Rayfield:Notify({
-    Title = "✅ SYADZZ HUB Siap — Nasi Rendang Style",
-    Content = "Semua fitur aktif | Treadmill tetap utuh!",
+    Title = "✅ BERHASIL DIMUAT!",
+    Content = "Tidak ada error lagi | Treadmill tetap utuh!",
     Duration = 4
 })
