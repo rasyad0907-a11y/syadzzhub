@@ -1,19 +1,19 @@
---// SYADZZ HUB - STEAL AN EGG (PERFECT FILTER & TELEPORT FIX)
+--// SYADZZ HUB - STEAL AN EGG (PERFECT TREADMILL & FILTER FIX)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
-    if CoreGui:FindFirstChild("SyadzzPerfectScript") then
-        CoreGui.SyadzzPerfectScript:Destroy()
+    if CoreGui:FindFirstChild("SyadzzUltraFixScript") then
+        CoreGui.SyadzzUltraFixScript:Destroy()
     end
 end)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg 🥚 [Pro Fix]",
+    Name = "SYADZZ HUB | Steal an Egg 🥚 [Fix Final]",
     LoadingTitle = "Memuat Script...",
     LoadingSubtitle = "by Syadholicc",
     ConfigurationSaving = { Enabled = false },
@@ -38,7 +38,7 @@ local Settings = {
     }
 }
 
--- HIERARKI KELANGKAAN (Divine > Eternal > Secret > Cosmic > Mythic > Legendary > Epic > Rare)
+-- PRIORITAS KELANGKAAN (Divine > Eternal > Secret > Cosmic > Mythic > Legendary > Epic > Rare)
 local RarityPriority = {
     ["Divine"] = 1000,
     ["Eternal"] = 900,
@@ -56,63 +56,53 @@ local GameZones = {
     "Titan Temple", "Enchanted Forest"
 }
 
--- MENCARI BASE / PLOT PLAYER SECARA OTOMATIS & AMAN
+-- MENCARI SAFE ZONE BASE
 local function getSafeBaseCFrame()
-    if Settings.SavedBaseCFrame and Settings.SavedBaseCFrame.Position.Y > 0 then
+    if Settings.SavedBaseCFrame and Settings.SavedBaseCFrame.Position.Y > -10 then
         return Settings.SavedBaseCFrame
     end
-    
-    local possibleFolders = {"Plots", "Bases", "PlotFolder", "PlayerPlots", "BasesFolder"}
-    for _, fName in ipairs(possibleFolders) do
-        local folder = Workspace:FindFirstChild(fName)
-        if folder then
-            for _, plot in pairs(folder:GetChildren()) do
-                if plot.Name == LocalPlayer.Name 
-                   or plot:GetAttribute("Owner") == LocalPlayer.Name 
-                   or plot:GetAttribute("Player") == LocalPlayer.Name
-                   or (plot:FindFirstChild("Owner") and tostring(plot.Owner.Value) == LocalPlayer.Name) then
-                    local pPivot = plot:GetPivot()
-                    if pPivot.Position.Y > -10 then
-                        return pPivot + Vector3.new(0, 4, 0)
-                    end
-                end
-            end
-        end
-    end
-
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = LocalPlayer.Character.HumanoidRootPart
         if hrp.Position.Y > -10 then
             return hrp.CFrame
         end
     end
-
     return CFrame.new(0, 10, 0)
 end
 
--- DETEKSI TREADMILL TERDEKAT DENGAN PLOT/PLAYER OTOMATIS
-local function getAutoTreadmillPart()
+-- DETEKSI ATAS TREADMILL PRESISI (MENCARI TEKS LANGKAH / TRACK)
+local function getExactTreadmillPart()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
 
+    -- Cari berdasarkan Teks "langkah" atau "step"
+    for _, gui in pairs(Workspace:GetDescendants()) do
+        if gui:IsA("TextLabel") or gui:IsA("TextButton") then
+            local txt = gui.Text:lower()
+            if txt:find("langkah") or txt:find("step") then
+                local part = gui:FindFirstAncestorWhichIsA("BasePart") or (gui.Parent and gui.Parent:IsA("BasePart") and gui.Parent)
+                if part and (part.Position - myPos).Magnitude < 250 then
+                    return part
+                end
+            end
+        end
+    end
+
+    -- Cari berdasarkan nama part fisik Treadmill (bukan papan Sign)
     local bestPart = nil
     local minDistance = 250
-
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local name = obj.Name:lower()
             local parentName = obj.Parent and obj.Parent.Name:lower() or ""
-            
-            if name:find("treadmill") or name:find("trainer") or name:find("gym") 
-               or name:find("flame") or name:find("freeze") or name:find("demonic") 
-               or name:find("angelic") or name:find("astral") or name:find("scifi")
-               or parentName:find("treadmill") or parentName:find("trainer") then
-                
-                local dist = (obj.Position - myPos).Magnitude
-                if dist < minDistance then
-                    minDistance = dist
-                    bestPart = obj
+            if not name:find("sign") and not name:find("board") and not name:find("tingkat") and not parentName:find("sign") then
+                if name:find("tread") or name:find("pad") or name:find("track") or parentName:find("treadmill") or name:find("demonic") or name:find("flame") or name:find("astral") or name:find("freeze") then
+                    local dist = (obj.Position - myPos).Magnitude
+                    if dist < minDistance then
+                        minDistance = dist
+                        bestPart = obj
+                    end
                 end
             end
         end
@@ -120,23 +110,45 @@ local function getAutoTreadmillPart()
     return bestPart
 end
 
--- DETEKSI RARITY TELUR (AKURAT DENGAN STRING SEARCH)
+-- DETEKSI RARITY DEEP SCAN (INGGRIS & INDONESIA)
 local function getEggRarityData(eggModel)
     if not eggModel then return "Rare", 300 end
-    local fullText = eggModel:GetFullName():lower()
-    for _, attr in pairs(eggModel:GetAttributes()) do
-        fullText = fullText .. " " .. tostring(attr):lower()
-    end
     
-    for rarity, weight in pairs(RarityPriority) do
-        if fullText:find(rarity:lower()) then
-            return rarity, weight
+    local fullText = eggModel:GetFullName():lower()
+    for _, descendant in pairs(eggModel:GetDescendants()) do
+        fullText = fullText .. " " .. descendant.Name:lower()
+        if descendant:IsA("ValueBase") then
+            fullText = fullText .. " " .. tostring(descendant.Value):lower()
+        elseif descendant:IsA("TextLabel") then
+            fullText = fullText .. " " .. descendant.Text:lower()
         end
     end
+    for attrName, attrVal in pairs(eggModel:GetAttributes()) do
+        fullText = fullText .. " " .. attrName:lower() .. " " .. tostring(attrVal):lower()
+    end
+
+    if fullText:find("divine") or fullText:find("ilahi") or fullText:find("malaikat") then
+        return "Divine", 1000
+    elseif fullText:find("eternal") or fullText:find("abadi") or fullText:find("iblis") then
+        return "Eternal", 900
+    elseif fullText:find("secret") or fullText:find("rahasia") or fullText:find("???") then
+        return "Secret", 800
+    elseif fullText:find("cosmic") or fullText:find("kosmik") then
+        return "Cosmic", 700
+    elseif fullText:find("mythic") or fullText:find("mitos") then
+        return "Mythic", 600
+    elseif fullText:find("legendary") or fullText:find("legendaris") then
+        return "Legendary", 500
+    elseif fullText:find("epic") or fullText:find("epik") then
+        return "Epic", 400
+    elseif fullText:find("rare") or fullText:find("langka") then
+        return "Rare", 300
+    end
+
     return "Rare", 300
 end
 
--- MATCH ZONA/AREA TELUR
+-- MATCH ZONA AREA
 local function isZoneMatched(eggObj, selectedArea)
     if selectedArea == "All (none)" or selectedArea == "All" or selectedArea == "" then
         return true
@@ -161,7 +173,7 @@ FarmTab:CreateToggle({
             local hrp = LocalPlayer.Character.HumanoidRootPart
             if hrp.Position.Y > -10 then
                 Settings.SavedBaseCFrame = hrp.CFrame
-                Rayfield:Notify({Title = "Base Safe Zone Saved", Content = "Titik base berhasil dikunci!", Duration = 3})
+                Rayfield:Notify({Title = "Base Safe Zone Saved", Content = "Titik aman terkunci!", Duration = 3})
             end
         end
     end,
@@ -193,13 +205,13 @@ end
 
 -- GYM TAB
 GymTab:CreateToggle({
-    Name = "Auto Treadmill (Deteksi Otomatis Mesin)",
+    Name = "Auto Treadmill (Presisi Atas Mesin)",
     CurrentValue = false,
     Callback = function(v) Settings.AutoTreadmill = v end,
 })
 
--- LOOP AUTO TREADMILL (OTOMATIS TANPA BUTTON)
-local targetTreadmillPart = nil
+-- LOOP AUTO TREADMILL PRESISI
+local cachedTreadmillPart = nil
 task.spawn(function()
     while task.wait(0.15) do
         if Settings.AutoTreadmill then
@@ -208,25 +220,26 @@ task.spawn(function()
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
                 local hrp = char.HumanoidRootPart
 
-                if not targetTreadmillPart or not targetTreadmillPart:IsDescendantOf(Workspace) then
-                    targetTreadmillPart = getAutoTreadmillPart()
+                if not cachedTreadmillPart or not cachedTreadmillPart:IsDescendantOf(Workspace) then
+                    cachedTreadmillPart = getExactTreadmillPart()
                 end
 
-                if targetTreadmillPart then
-                    hrp.CFrame = targetTreadmillPart.CFrame + Vector3.new(0, 3, 0)
+                if cachedTreadmillPart then
+                    -- Berdiri tepat di atas lintasan treadmill
+                    hrp.CFrame = cachedTreadmillPart.CFrame + Vector3.new(0, 3.5, 0)
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                 end
             end)
         else
-            targetTreadmillPart = nil
+            cachedTreadmillPart = nil
         end
     end
 end)
 
--- LOOP AUTO STEAL (SISTEM PRIORITAS DENGAN KETAT)
+-- LOOP AUTO STEAL (DELAY DISESUAIKAN & PRIORITAS KERAS)
 task.spawn(function()
-    while task.wait(0.25) do
+    while task.wait(0.3) do
         if Settings.AutoSteal then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -256,10 +269,7 @@ task.spawn(function()
                                 if eggPart then
                                     local rName, rWeight = getEggRarityData(eggModel)
                                     
-                                    -- Filter 1: Area
                                     local isAreaOk = isZoneMatched(eggModel, Settings.SelectedArea)
-                                    
-                                    -- Filter 2: Rarity
                                     local isRarityOk = (totalActiveRarities == 0) or (activeRarities[rName] == true)
 
                                     if isAreaOk and isRarityOk then
@@ -276,30 +286,34 @@ task.spawn(function()
                     end
                 end
 
-                -- URUTKAN BERDASARKAN PRIORITAS WEIGHT TERTINGGI
+                -- URUTKAN BERDASARKAN RARITY TERTINGGI
                 table.sort(targets, function(a, b)
                     return a.weight > b.weight
                 end)
 
-                -- EKSEKUSI TELEPORT UNTUK TELUR DENGAN PRIORITAS TERTINGGI
                 if #targets > 0 then
                     local target = targets[1]
 
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
 
+                    -- Teleport ke telur
                     hrp.CFrame = target.part.CFrame * CFrame.new(0, 2.5, 0)
-                    task.wait(0.1)
+                    task.wait(0.18) -- Delay disesuaikan agar tidak terlalu cepat
 
+                    -- Ambil telur berulang agar pasti masuk inventaris
                     target.prompt.RequiresLineOfSight = false
                     target.prompt.MaxActivationDistance = 9999
                     fireproximityprompt(target.prompt)
-                    task.wait(0.12)
+                    task.wait(0.08)
+                    fireproximityprompt(target.prompt)
+                    task.wait(0.15)
 
+                    -- Kembali ke base aman
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                     hrp.CFrame = safeReturn
-                    task.wait(0.08)
+                    task.wait(0.1)
                 end
             end)
         end
@@ -329,6 +343,6 @@ end)
 
 Rayfield:Notify({
     Title = "SYADZZ HUB",
-    Content = "Script Steal, Filter Prioritas & Treadmill Siap!",
+    Content = "Pembaruan Treadmill & Filter Berhasil Dimuat!",
     Duration = 4,
 })
