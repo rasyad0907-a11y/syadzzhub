@@ -13,8 +13,8 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg 🥚 [Auto Steal Fix]",
-    LoadingTitle = "Memuat Master Hub...",
+    Name = "SYADZZ HUB | Steal an Egg 🥚 [Anti-Sky Fix]",
+    LoadingTitle = "Memuat Hub...",
     LoadingSubtitle = "by Syadholicc",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
@@ -55,22 +55,27 @@ local GameZones = {
     "Titan Temple", "Enchanted Forest"
 }
 
--- MENCARI SAFE ZONE BASE
-local function getSafeBaseCFrame()
-    if Settings.SavedBaseCFrame then
-        return Settings.SavedBaseCFrame
-    end
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = LocalPlayer.Character.HumanoidRootPart
-        if hrp.Position.Y > -10 and hrp.Position.Y < 100 then
-            return hrp.CFrame
+-- DETEKSI PLOT BASE PERMANEN (MENCEGAH TITIK DEFAULT LANGIT/LAUTAN)[cite: 9, 10]
+local function getAbsolutePlotCFrame()
+    local possibleFolders = {"Plots", "Bases", "PlotFolder", "PlayerPlots", "BasesFolder"}
+    for _, fName in ipairs(possibleFolders) do
+        local folder = Workspace:FindFirstChild(fName)
+        if folder then
+            for _, plot in pairs(folder:GetChildren()) do
+                if plot.Name == LocalPlayer.Name 
+                   or plot:GetAttribute("Owner") == LocalPlayer.Name 
+                   or plot:GetAttribute("Player") == LocalPlayer.Name
+                   or (plot:FindFirstChild("Owner") and tostring(plot.Owner.Value) == LocalPlayer.Name) then
+                    return plot:GetPivot() + Vector3.new(0, 5, 0)
+                end
+            end
         end
     end
-    return CFrame.new(0, 10, 0)
+    return nil
 end
 
 --------------------------------------------------------------------
--- DETEKSI TREADMILL (TIDAK DIUBAH SAMA SEKALI)
+-- DETEKSI TREADMILL (TIDAK DIUBAH SAMA SEKALI - TETAP PRESISI)
 --------------------------------------------------------------------
 local function getExactTreadmillBelt()
     local char = LocalPlayer.Character
@@ -122,7 +127,7 @@ local function getExactTreadmillBelt()
 end
 
 --------------------------------------------------------------------
--- PERBAIKAN AUTO STEAL, FILTER RARITY & AREA
+-- DETEKSI RARITY & AREA
 --------------------------------------------------------------------
 local function getEggRarityData(eggModel)
     if not eggModel then return "Rare", 300 end
@@ -192,6 +197,7 @@ FarmTab:CreateToggle({
         Settings.AutoSteal = v
         if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = LocalPlayer.Character.HumanoidRootPart
+            -- Kunci titik berdiri saat tombol dinyalakan ATAU ambil titik pusat Plot
             Settings.SavedBaseCFrame = hrp.CFrame
             Rayfield:Notify({Title = "Base Safe Zone Saved", Content = "Titik base terkunci aman!", Duration = 3})
         end
@@ -230,7 +236,7 @@ GymTab:CreateToggle({
 })
 
 --------------------------------------------------------------------
--- LOOP AUTO TREADMILL (TIDAK DIUBAH)
+-- LOOP AUTO TREADMILL (TIDAK DIUBAH SAMA SEKALI)
 --------------------------------------------------------------------
 local cachedTreadmillCFrame = nil
 task.spawn(function()
@@ -258,7 +264,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- LOOP AUTO STEAL FIX (ANTI-LANGIT + PRIORITAS AKURAT)
+-- LOOP AUTO STEAL PERBAIKAN TOTAL (ANTI-LANGIT + COLLISION FIX)
 --------------------------------------------------------------------
 task.spawn(function()
     while task.wait(0.3) do
@@ -268,7 +274,8 @@ task.spawn(function()
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
                 local hrp = char.HumanoidRootPart
 
-                local safeReturn = getSafeBaseCFrame()
+                -- Tentukan posisi kembali yang pasti valid (Base Terkunci atau Pusat Plot)[cite: 9, 10]
+                local safeReturn = Settings.SavedBaseCFrame or getAbsolutePlotCFrame() or hrp.CFrame
 
                 local activeRarities = {}
                 local totalActiveRarities = 0
@@ -316,25 +323,32 @@ task.spawn(function()
                 if #targets > 0 then
                     local target = targets[1]
 
-                    -- Reset kecepatan fisika agar tidak terlempar ke langit
+                    -- Disable Collision Sementara (Mencegah Fisika Memental ke Langit)
+                    for _, p in pairs(char:GetChildren()) do
+                        if p:IsA("BasePart") then
+                            p.CanCollide = false
+                        end
+                    end
+
+                    -- Stop Kecepatan Fisika
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
 
-                    -- Teleport ke Telur
-                    hrp.CFrame = target.part.CFrame * CFrame.new(0, 2.5, 0)
-                    task.wait(0.15)
+                    -- Teleport +4 stud di ATAS telur (biar gak nembus/bertabrakan)
+                    hrp.CFrame = target.part.CFrame * CFrame.new(0, 4, 0)
+                    task.wait(0.12)
 
                     -- Ambil Telur
                     target.prompt.RequiresLineOfSight = false
                     target.prompt.MaxActivationDistance = 9999
                     fireproximityprompt(target.prompt)
-                    task.wait(0.15)
+                    task.wait(0.12)
 
-                    -- Reset fisika & Kembalikan ke Base
+                    -- Stop Kecepatan & Balik ke Base Aman
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                     hrp.CFrame = safeReturn
-                    task.wait(0.1)
+                    task.wait(0.08)
                 end
             end)
         end
@@ -364,6 +378,6 @@ end)
 
 Rayfield:Notify({
     Title = "SYADZZ HUB",
-    Content = "Auto Steal dimuat! Treadmill tetap aman.",
+    Content = "Auto Steal Anti-Sky Fix dimuat!",
     Duration = 4,
 })
