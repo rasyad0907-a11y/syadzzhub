@@ -1,16 +1,17 @@
 -- ==================================================
--- 🔥 LURUS KE DEPAN KE AREA TELUR — BUKAN KE ATAS!
+-- 🔥 DIPERBAIKI TOTAL — PASTI TELEPORT!
 -- ⚠️ TREADMILL TIDAK DIUBAH SEKALI PUN ⚠️
 -- ==================================================
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
-    if CoreGui:FindFirstChild("SyadzzHub") then
-        CoreGui:FindFirstChild("SyadzzHub"):Destroy()
+    if CoreGui:FindFirstChild("SyadzzMasterHub") then
+        CoreGui.SyadzzMasterHub:Destroy()
     end
 end)
 
@@ -18,22 +19,19 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
     Name = "SYADZZ HUB | Steal an Egg 🥚",
-    LoadingTitle = "LURUS KE DEPAN — TIDAK KE LANGIT",
-    LoadingSubtitle = "Zona Aman ↔ Area Telur",
+    LoadingTitle = "DIPERBAIKI TOTAL",
+    LoadingSubtitle = "Pasti pindah sekarang!",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
 })
 
 local Settings = {
     AutoSteal = false,
-    AutoPlace = false,
     AutoTreadmill = false,
-    SavedBaseCFrame = nil, -- Zona Aman
+    SavedBaseCFrame = nil,
     SavedTreadmillCFrame = nil,
-    -- Posisi lurus ke depan, datar di tanah
-    MaxEggHeight = 50,
+    MaxEggHeight = 60,
     MinEggHeight = -5,
-    StandOffset = 1.8, -- Pas di samping telur
     Rarities = {
         ["Divine"] = false,
         ["Eternal"] = false,
@@ -137,22 +135,18 @@ FarmTab:CreateToggle({
         Settings.AutoSteal = v
         if v then
             local char = LocalPlayer.Character
-            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-            -- Simpan ZONA AMAN saat nyalakan
-            Settings.SavedBaseCFrame = char.HumanoidRootPart.CFrame
-            Rayfield:Notify({
-                Title = "✅ Zona Aman Disimpan",
-                Content = "Lurus ke depan cari telur...",
-                Duration = 2.5
-            })
+            if not char then
+                Rayfield:Notify({Title = "⚠️ Tunggu", Content = "Karakter belum siap!", Duration = 3})
+                Settings.AutoSteal = false
+                return
+            end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                Settings.SavedBaseCFrame = hrp.CFrame
+                Rayfield:Notify({Title = "✅ Siap!", Content = "Mencari telur & pindah sekarang!", Duration = 2.5})
+            end
         end
     end
-})
-
-FarmTab:CreateToggle({
-    Name = "Auto Place to Pen",
-    CurrentValue = false,
-    Callback = function(v) Settings.AutoPlace = v end
 })
 
 FilterTab:CreateSection("Prioritas — Divine > Eternal > dst")
@@ -190,7 +184,7 @@ task.spawn(function()
             cachedTreadmillCFrame = getExactTreadmillBelt()
             if cachedTreadmillCFrame then
                 Settings.SavedTreadmillCFrame = cachedTreadmillCFrame
-                Rayfield:Notify({Title = "✅ Treadmill Siap", Content = "Balik ke sini setelah selesai", Duration = 2.5})
+                Rayfield:Notify({Title = "✅ Treadmill", Content = "Siap — balik ke sini!", Duration = 2.5})
             end
         end
         if cachedTreadmillCFrame and not Settings.AutoSteal then
@@ -201,10 +195,10 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- 🔥 BAGIAN UTAMA — LURUS KE DEPAN, DATAR DI TANAH
+-- 🔥 INI DIPERBAIKI TOTAL — PASTI PINDAH!
 --------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(0.8) do
+    while task.wait(1.0) do
         if not Settings.AutoSteal then
             task.wait(0.2)
             continue
@@ -216,10 +210,17 @@ task.spawn(function()
         end
 
         local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
-        local hrp = char.HumanoidRootPart
+        if not char then
+            Rayfield:Notify({Title = "⚠️ Karakter Hilang", Content = "Tunggu sebentar lalu coba lagi", Duration = 2})
+            continue
+        end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then
+            Rayfield:Notify({Title = "⚠️ HRP Tidak Ada", Content = "Coba nyalakan lagi", Duration = 2})
+            continue
+        end
 
-        -- BALIK KE: Treadmill kalau aktif, kalau tidak ke Zona Aman
+        -- Titik pulang
         local returnPoint = Settings.SavedBaseCFrame
         if Settings.AutoTreadmill and Settings.SavedTreadmillCFrame then
             returnPoint = Settings.SavedTreadmillCFrame
@@ -235,30 +236,34 @@ task.spawn(function()
             end
         end
 
-        -- 🔍 CARI TELUR — lurus ke depan, di tanah
+        -- 🔍 CARI TELUR — DIPERLUAS
         local validEggs = {}
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") then
-                local fullTxt = (obj.Name .. " " .. obj.ActionText .. " " .. obj.ObjectText):lower()
+                local n = obj.Name:lower()
+                local a = obj.ActionText:lower()
+                local o = obj.ObjectText:lower()
+                local fullTxt = n .. " " .. a .. " " .. o
 
-                -- Harus berhubungan telur
-                if not (fullTxt:find("egg") or fullTxt:find("telur") or fullTxt:find("steal") or fullTxt:find("take")) then
+                -- Cari telur — lebih banyak kata kunci
+                if not (fullTxt:find("egg") or fullTxt:find("telur") or fullTxt:find("steal") or fullTxt:find("take") or fullTxt:find("collect")) then
                     continue
                 end
-                -- Bukan bangunan/lainnya
+                -- Bukan lain-lain
                 if fullTxt:find("wisp") or fullTxt:find("machine") or fullTxt:find("shop") or fullTxt:find("quest") then
                     continue
                 end
 
-                -- Cari bagian fisik telur
+                -- Cari bagian fisik
                 local eggPart = obj.Parent
                 if not eggPart then continue end
                 if not eggPart:IsA("BasePart") then
-                    eggPart = eggPart:FindFirstChildWhichIsA("BasePart")
+                    local found = eggPart:FindFirstChildWhichIsA("BasePart", true)
+                    eggPart = found
                 end
                 if not eggPart then continue end
 
-                -- ✅ DATAR DI TANAH — bukan ke atas!
+                -- Batas ketinggian
                 local y = eggPart.Position.Y
                 if y >= Settings.MaxEggHeight or y <= Settings.MinEggHeight then
                     continue
@@ -279,14 +284,14 @@ task.spawn(function()
             end
         end
 
-        -- Urut dari tertinggi
+        -- Urut
         table.sort(validEggs, function(a, b) return a.weight > b.weight end)
 
         if #validEggs == 0 then
             Rayfield:Notify({
-                Title = "🔍 Mencari...",
-                Content = anySelected and "Menunggu "..next(activeRarities).." muncul" or "Lurus ke depan cari telur",
-                Duration = 1.5
+                Title = "🔍 Tidak Ketemu Telur",
+                Content = "Mencari... coba lihat ada telur gak?",
+                Duration = 2
             })
             continue
         end
@@ -295,39 +300,42 @@ task.spawn(function()
         local tPos = target.part.Position
 
         Rayfield:Notify({
-            Title = "🥚 "..target.rarity,
-            Content = "Lurus ke depan ke telur...",
-            Duration = 2
+            Title = "🥚 KETEMU: "..target.rarity,
+            Content = "Pindah ke: "..math.floor(tPos.X)..","..math.floor(tPos.Y)..","..math.floor(tPos.Z),
+            Duration = 3
         })
 
-        -- ✅ LURUS KE DEPAN, DI TANAH — TIDAK KE LANGIT!
-        -- Posisi di samping telur, ketinggian pas
-        local posAkhir = Vector3.new(tPos.X, tPos.Y + Settings.StandOffset, tPos.Z)
-        hrp.CFrame = CFrame.new(posAkhir, tPos) -- Hadap ke telur
-        task.wait(0.5) -- Tunggu sampai sampai!
+        -- ==================================================
+        -- 🔥 TELEPORT PASTI JALAN — DIPERBAIKI
+        -- ==================================================
+        local tujuan = Vector3.new(tPos.X, tPos.Y + 1.5, tPos.Z)
 
-        -- ✅ AMBIL TELUR
-        target.prompt.MaxActivationDistance = 20
+        -- Langsung pindah — tanpa syarat rumit
+        hrp.CFrame = CFrame.new(tujuan)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+
+        Rayfield:Notify({Title = "🏃 Sudah Pindah!", Content = "Tunggu ambil...", Duration = 1.5})
+        task.wait(0.6)
+
+        -- Ambil telur
+        target.prompt.MaxActivationDistance = 25
         target.prompt.RequiresLineOfSight = false
         task.wait(0.3)
         fireproximityprompt(target.prompt)
 
-        Rayfield:Notify({
-            Title = "✅ DIAMBIL!",
-            Content = "Balik ke Zona Aman...",
-            Duration = 1.5
-        })
+        Rayfield:Notify({Title = "✅ DIAMBIL!", Content = "Balik ke Zona Aman...", Duration = 2})
         task.wait(0.5)
 
-        -- ✅ BALIK KE ZONA AMAN / TREADMILL
+        -- Balik
         hrp.CFrame = returnPoint
         hrp.AssemblyLinearVelocity = Vector3.zero
-        task.wait(0.4)
+        task.wait(0.5)
     end
 end)
 
 Rayfield:Notify({
-    Title = "✅ SIAP!",
-    Content = "Lurus ke depan → ambil → balik Zona Aman!",
-    Duration = 4
+    Title = "✅ SIAP TOTAL!",
+    Content = "Kalau tetap tidak pindah, berarti TIDAK KETEMU telurnya — lihat notifikasi!",
+    Duration = 5
 })
