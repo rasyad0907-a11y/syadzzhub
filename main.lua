@@ -1,4 +1,4 @@
---// SYADZZ HUB - STEAL AN EGG (PERFECT AUTO STEAL & PRESERVED TREADMILL)
+--// SYADZZ HUB - STEAL AN EGG (PERFECT SLOW STEAL & PRESERVED TREADMILL)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -13,7 +13,7 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB | Steal an Egg 🥚 [Anti-Sky Fix]",
+    Name = "SYADZZ HUB | Steal an Egg 🥚 [Slow & Safe Steal]",
     LoadingTitle = "Memuat Hub...",
     LoadingSubtitle = "by Syadholicc",
     ConfigurationSaving = { Enabled = false },
@@ -55,27 +55,8 @@ local GameZones = {
     "Titan Temple", "Enchanted Forest"
 }
 
--- DETEKSI PLOT BASE PERMANEN (MENCEGAH TITIK DEFAULT LANGIT/LAUTAN)[cite: 9, 10]
-local function getAbsolutePlotCFrame()
-    local possibleFolders = {"Plots", "Bases", "PlotFolder", "PlayerPlots", "BasesFolder"}
-    for _, fName in ipairs(possibleFolders) do
-        local folder = Workspace:FindFirstChild(fName)
-        if folder then
-            for _, plot in pairs(folder:GetChildren()) do
-                if plot.Name == LocalPlayer.Name 
-                   or plot:GetAttribute("Owner") == LocalPlayer.Name 
-                   or plot:GetAttribute("Player") == LocalPlayer.Name
-                   or (plot:FindFirstChild("Owner") and tostring(plot.Owner.Value) == LocalPlayer.Name) then
-                    return plot:GetPivot() + Vector3.new(0, 5, 0)
-                end
-            end
-        end
-    end
-    return nil
-end
-
 --------------------------------------------------------------------
--- DETEKSI TREADMILL (TIDAK DIUBAH SAMA SEKALI - TETAP PRESISI)
+-- DETEKSI TREADMILL (100% SAMA, TIDAK DIUBAH APAPUN)
 --------------------------------------------------------------------
 local function getExactTreadmillBelt()
     local char = LocalPlayer.Character
@@ -197,9 +178,12 @@ FarmTab:CreateToggle({
         Settings.AutoSteal = v
         if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = LocalPlayer.Character.HumanoidRootPart
-            -- Kunci titik berdiri saat tombol dinyalakan ATAU ambil titik pusat Plot
-            Settings.SavedBaseCFrame = hrp.CFrame
-            Rayfield:Notify({Title = "Base Safe Zone Saved", Content = "Titik base terkunci aman!", Duration = 3})
+            if hrp.Position.Y > -5 and hrp.Position.Y < 50 then
+                Settings.SavedBaseCFrame = hrp.CFrame
+                Rayfield:Notify({Title = "Base Safe Zone Saved", Content = "Titik base terkunci aman di daratan!", Duration = 3})
+            else
+                Rayfield:Notify({Title = "Peringatan", Content = "Berdirilah di daratan base terlebih dahulu!", Duration = 3})
+            end
         end
     end,
 })
@@ -264,18 +248,26 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- LOOP AUTO STEAL PERBAIKAN TOTAL (ANTI-LANGIT + COLLISION FIX)
+-- LOOP AUTO STEAL FIX (SANTAY + ANTI-LANGIT KETAT)
 --------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.5) do
         if Settings.AutoSteal then
             pcall(function()
                 local char = LocalPlayer.Character
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
                 local hrp = char.HumanoidRootPart
 
-                -- Tentukan posisi kembali yang pasti valid (Base Terkunci atau Pusat Plot)[cite: 9, 10]
-                local safeReturn = Settings.SavedBaseCFrame or getAbsolutePlotCFrame() or hrp.CFrame
+                -- Pastikan koordinat baliq HANYA di daratan base yang valid (Y antara -5 sampai 50)
+                local safeReturn = Settings.SavedBaseCFrame
+                if not safeReturn or safeReturn.Position.Y > 50 or safeReturn.Position.Y < -5 then
+                    if hrp.Position.Y > -5 and hrp.Position.Y < 50 then
+                        Settings.SavedBaseCFrame = hrp.CFrame
+                        safeReturn = hrp.CFrame
+                    end
+                end
+
+                if not safeReturn then return end
 
                 local activeRarities = {}
                 local totalActiveRarities = 0
@@ -295,7 +287,8 @@ task.spawn(function()
                                 local eggModel = obj.Parent
                                 local eggPart = eggModel:IsA("BasePart") and eggModel or eggModel:FindFirstChildWhichIsA("BasePart", true)
 
-                                if eggPart then
+                                -- Abaikan telur jika berada di posisi glitch langit (Y > 150)
+                                if eggPart and eggPart.Position.Y < 150 then
                                     local rName, rWeight = getEggRarityData(eggModel)
                                     
                                     local isAreaOk = isZoneMatched(eggModel, Settings.SelectedArea)
@@ -315,7 +308,6 @@ task.spawn(function()
                     end
                 end
 
-                -- URUTKAN PRIORITAS: Divine (1000) > Eternal (900) > Secret (800) > dst
                 table.sort(targets, function(a, b)
                     return a.weight > b.weight
                 end)
@@ -323,32 +315,31 @@ task.spawn(function()
                 if #targets > 0 then
                     local target = targets[1]
 
-                    -- Disable Collision Sementara (Mencegah Fisika Memental ke Langit)
-                    for _, p in pairs(char:GetChildren()) do
-                        if p:IsA("BasePart") then
-                            p.CanCollide = false
-                        end
-                    end
-
-                    -- Stop Kecepatan Fisika
+                    -- Reset fisika sebelum pindah
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
 
-                    -- Teleport +4 stud di ATAS telur (biar gak nembus/bertabrakan)
-                    hrp.CFrame = target.part.CFrame * CFrame.new(0, 4, 0)
-                    task.wait(0.12)
+                    -- Teleport ke Telur
+                    hrp.CFrame = target.part.CFrame * CFrame.new(0, 3, 0)
+                    
+                    -- Santay: Beri jeda 0.4 detik agar server mendaftarkan posisi karakter terlebih dahulu
+                    task.wait(0.4)
 
                     -- Ambil Telur
                     target.prompt.RequiresLineOfSight = false
                     target.prompt.MaxActivationDistance = 9999
                     fireproximityprompt(target.prompt)
-                    task.wait(0.12)
+                    
+                    -- Jeda setelah ambil
+                    task.wait(0.35)
 
-                    -- Stop Kecepatan & Balik ke Base Aman
+                    -- Reset fisika & Teleport Balik ke Base Daratan Aman
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                     hrp.CFrame = safeReturn
-                    task.wait(0.08)
+                    
+                    task.wait(0.2)
+                    hrp.AssemblyLinearVelocity = Vector3.zero
                 end
             end)
         end
@@ -378,6 +369,6 @@ end)
 
 Rayfield:Notify({
     Title = "SYADZZ HUB",
-    Content = "Auto Steal Anti-Sky Fix dimuat!",
+    Content = "Auto Steal santai & anti-langit dimuat!",
     Duration = 4,
 })
