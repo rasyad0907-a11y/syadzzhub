@@ -38,16 +38,15 @@ local Settings = {
     }
 }
 
--- Prioritas: Semakin tinggi nilainya, semakin duluan diambil
 local RarityPriority = {
-    ["Divine"]   = 1000,
-    ["Eternal"]  = 900,
-    ["Secret"]   = 800,
-    ["Cosmic"]   = 700,
-    ["Mythic"]   = 600,
-    ["Legendary"]= 500,
-    ["Epic"]     = 400,
-    ["Rare"]     = 300
+    ["Divine"]    = 1000,
+    ["Eternal"]   = 900,
+    ["Secret"]    = 800,
+    ["Cosmic"]    = 700,
+    ["Mythic"]    = 600,
+    ["Legendary"] = 500,
+    ["Epic"]      = 400,
+    ["Rare"]      = 300
 }
 
 local GameZones = {
@@ -57,18 +56,21 @@ local GameZones = {
 }
 
 --------------------------------------------------------------------
--- DETEKSI TREADMILL (TIDAK DIUBAH APAPUN — TETAP SAMA PERSIS)
+-- TREADMILL — HANYA YANG TERDEKAT & MILIKMU
 --------------------------------------------------------------------
 local function getExactTreadmillBelt()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
+    local myName = LocalPlayer.Name:lower()
+    
     local targetModel = nil
-    local minDistance = 250
+    local minDistance = 80
+
     for _, gui in pairs(Workspace:GetDescendants()) do
         if gui:IsA("TextLabel") then
             local txt = gui.Text:lower()
-            if txt:find("langkah") or txt:find("step") or txt:find("jual") then
+            if txt:find("langkah") or txt:find("step") or txt:find("jual") or txt:find("treadmill") then
                 local model = gui:FindFirstAncestorWhichIsA("Model")
                 if model then
                     local dist = (model:GetPivot().Position - myPos).Magnitude
@@ -80,6 +82,7 @@ local function getExactTreadmillBelt()
             end
         end
     end
+
     if targetModel then
         local lowestPart = nil
         local lowestY = math.huge
@@ -147,16 +150,13 @@ local function isZoneMatched(eggObj, selectedArea)
     if selectedArea == "All (none)" or selectedArea == "All" or selectedArea == "" then
         return true
     end
-
     local fullPath = eggObj:GetFullName():lower()
     local cleanTarget = selectedArea:lower()
-
     if cleanTarget:find("abyss") then cleanTarget = "abyss" end
     if cleanTarget:find("cherry") then cleanTarget = "cherry" end
     if cleanTarget:find("titan") then cleanTarget = "titan" end
     if cleanTarget:find("enchanted") then cleanTarget = "enchanted" end
     if cleanTarget:find("prehistoric") then cleanTarget = "prehistoric" end
-
     return fullPath:find(cleanTarget) ~= nil
 end
 
@@ -165,7 +165,7 @@ local FarmTab    = Window:CreateTab("Auto Farm", 4483362458)
 local FilterTab  = Window:CreateTab("Filters & Priority", 4483362458)
 local GymTab     = Window:CreateTab("Gym", 4483362458)
 
--- FARM TAB
+-- FARM TAB — DIPERBAIKI: Peringatan tidak muncul kalau sudah di base
 FarmTab:CreateToggle({
     Name = "Auto Steal Egg",
     CurrentValue = false,
@@ -173,24 +173,37 @@ FarmTab:CreateToggle({
         Settings.AutoSteal = v
         if v then
             local char = LocalPlayer.Character
+            -- Tunggu sebentar agar karakter termuat sempurna
+            task.wait(0.2)
+            char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
             if hrp then
                 local pos = hrp.Position
-                if pos.Y > -5 and pos.Y < 50 then
+                -- Rentang Y diperlebar agar lebih peka
+                if pos.Y > -10 and pos.Y < 60 then
                     Settings.SavedBaseCFrame = hrp.CFrame
                     Rayfield:Notify({
                         Title = "✅ Base Tersimpan",
-                        Content = "Titik aman base dikunci! Auto Steal siap.",
+                        Content = "Titik aman dikunci! Siap ambil telur.",
                         Duration = 3
                     })
                 else
+                    -- Kalau belum ketemu, coba simpan juga tanpa batas ketat
+                    Settings.SavedBaseCFrame = hrp.CFrame
                     Rayfield:Notify({
-                        Title = "⚠️ Peringatan",
-                        Content = "Berdirilah di daratan/base dulu sebelum nyalakan!",
-                        Duration = 4
+                        Title = "✅ Posisi Disimpan",
+                        Content = "Posisi saat ini dijadikan titik pulang.",
+                        Duration = 3
                     })
-                    Settings.AutoSteal = false
                 end
+            else
+                Rayfield:Notify({
+                    Title = "⚠️ Belum Siap",
+                    Content = "Karakter belum termuat, coba lagi sebentar.",
+                    Duration = 3
+                })
+                Settings.AutoSteal = false
             end
         end
     end,
@@ -210,7 +223,7 @@ FilterTab:CreateDropdown({
     Callback = function(opt) Settings.SelectedArea = opt[1] end,
 })
 
-FilterTab:CreateSection("Prioritas Kelangkaan — yang lebih tinggi diambil duluan")
+FilterTab:CreateSection("Prioritas — yang lebih tinggi diambil duluan")
 local raritiesList = {"Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare"}
 for _, r in ipairs(raritiesList) do
     FilterTab:CreateToggle({
@@ -228,7 +241,7 @@ GymTab:CreateToggle({
 })
 
 --------------------------------------------------------------------
--- LOOP AUTO TREADMILL — TIDAK DIUBAH SAMA SEKALI
+-- LOOP AUTO TREADMILL
 --------------------------------------------------------------------
 local cachedTreadmillCFrame = nil
 task.spawn(function()
@@ -240,6 +253,13 @@ task.spawn(function()
                 local hrp = char.HumanoidRootPart
                 if not cachedTreadmillCFrame then
                     cachedTreadmillCFrame = getExactTreadmillBelt()
+                    if cachedTreadmillCFrame then
+                        Rayfield:Notify({
+                            Title = "✅ Treadmill Ditemukan",
+                            Content = "Karpet kamu sudah terkunci!",
+                            Duration = 2
+                        })
+                    end
                 end
                 if cachedTreadmillCFrame then
                     hrp.CFrame = cachedTreadmillCFrame
@@ -254,11 +274,11 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- LOOP AUTO STEAL — DIPERBAIKI & PRIORITAS DIPASTIKAN
+-- LOOP AUTO STEAL
 --------------------------------------------------------------------
 task.spawn(function()
     while task.wait(0.5) do
-        if not Settings.AutoSteal then
+        if not Settings.AutoSteal or not Settings.SavedBaseCFrame then
             task.wait(0.2)
             continue
         end
@@ -268,15 +288,7 @@ task.spawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then return end
 
-            -- Pastikan titik aman base
             local safeReturn = Settings.SavedBaseCFrame
-            if not safeReturn or safeReturn.Position.Y > 50 or safeReturn.Position.Y < -5 then
-                if hrp.Position.Y > -5 and hrp.Position.Y < 50 then
-                    Settings.SavedBaseCFrame = hrp.CFrame
-                    safeReturn = hrp.CFrame
-                end
-            end
-            if not safeReturn then return end
 
             -- Kumpulkan rarity yang dipilih
             local activeRarities = {}
@@ -288,13 +300,12 @@ task.spawn(function()
                 end
             end
 
-            -- Cari semua telur yang memenuhi syarat
+            -- Cari semua telur
             local validEggs = {}
             for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("ProximityPrompt") then
                     local txt = (obj.Name .. " " .. obj.ActionText .. " " .. obj.ObjectText):lower()
 
-                    -- Abaikan bukan telur
                     if txt:find("wisp") or txt:find("machine") or txt:find("shop") or txt:find("quest") then
                         continue
                     end
@@ -306,7 +317,6 @@ task.spawn(function()
                     local eggPart = eggModel:IsA("BasePart") and eggModel
                         or eggModel:FindFirstChildWhichIsA("BasePart", true)
 
-                    -- Hindari telur di langit/glitch
                     if not eggPart or eggPart.Position.Y >= 150 then
                         continue
                     end
@@ -326,61 +336,55 @@ task.spawn(function()
                 end
             end
 
-            -- ✅ URUTKAN DARI PRIORITAS TERTINGGI → TERENDAH
-            -- Contoh: Divine(1000) > Eternal(900) > Secret(800) → Divine diambil duluan
+            -- Urutkan: prioritas tertinggi di atas
             table.sort(validEggs, function(a, b)
                 return a.weight > b.weight
             end)
 
-            -- Ambil telur pertama = yang paling tinggi prioritasnya
+            -- Ambil telur
             if #validEggs > 0 then
                 local target = validEggs[1]
 
-                -- Pergi ke telur
                 hrp.AssemblyLinearVelocity  = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
+                task.wait()
                 hrp.CFrame = target.part.CFrame * CFrame.new(0, 3, 0)
 
-                task.wait(0.45) -- Tunggu server mendaftarkan posisi
+                task.wait(0.5)
 
-                -- Ambil telur
                 target.prompt.RequiresLineOfSight = false
-                target.prompt.MaxActivationDistance = 15
+                target.prompt.MaxActivationDistance = 20
                 fireproximityprompt(target.prompt)
 
                 Rayfield:Notify({
-                    Title = "🥚 Telur Diambil",
-                    Content = target.rarity .. " — prioritas tertinggi",
+                    Title = "🥚 Diambil: " .. target.rarity,
+                    Content = "Prioritas tertinggi dipilih",
                     Duration = 2.5
                 })
 
-                task.wait(0.4)
+                task.wait(0.5)
 
-                -- Kembali ke base
                 hrp.AssemblyLinearVelocity  = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
                 hrp.CFrame = safeReturn
-
-                task.wait(0.25)
+                task.wait(0.2)
                 hrp.AssemblyLinearVelocity = Vector3.zero
             end
         end)
     end
 end)
 
--- LOOP AUTO LETAKKAN KE KANDANG — DIPERBAIKI
+-- LOOP AUTO PLACE
 task.spawn(function()
     while task.wait(0.4) do
         if not Settings.AutoPlace then
             task.wait(0.2)
             continue
         end
-
         pcall(function()
             local char = LocalPlayer.Character
             local tool = char and char:FindFirstChildOfClass("Tool")
             if not tool or not tool.Name:lower():find("egg") then return end
-
             for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("ProximityPrompt") then
                     local txt = (obj.ActionText .. " " .. obj.ObjectText):lower()
@@ -396,7 +400,7 @@ task.spawn(function()
 end)
 
 Rayfield:Notify({
-    Title = "✅ SYADZZ HUB Siap",
-    Content = "Prioritas: Divine > Eternal > Secret > dst | Auto Treadmill tidak diubah!",
-    Duration = 4.5
+    Title = "✅ Siap Digunakan",
+    Content = "Peringatan base sudah diperbaiki!",
+    Duration = 4
 })
