@@ -1,5 +1,5 @@
 -- ==================================================
--- 🚀 SYADZZ HUB — SPECIALIZED BASE/PLOT EGG STEALER
+-- 🚀 SYADZZ HUB — UNIVERSAL NEST EGG STEALER
 -- ⚠️ AUTO TREADMILL TIDAK DIUBAH SEKALI PUN ⚠️
 -- ==================================================
 
@@ -16,9 +16,9 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB 🥚 | Fix Total Steal An Egg",
+    Name = "SYADZZ HUB 🥚 | Universal Nest Stealer",
     LoadingTitle = "SYADZZ HUB",
-    LoadingSubtitle = "Anti-Portal & Direct Plot Steal",
+    LoadingSubtitle = "Targeting All Nests Automatically",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
 })
@@ -28,19 +28,12 @@ local Settings = {
     AutoTreadmill = false,
     SavedBaseCFrame = nil,
     SavedTreadmillCFrame = nil,
-    StealDelay = 0.2,
+    StealDelay = 0.15,
     Rarities = {
-        ["Infinity"] = true,
-        ["Celestial"] = true,
-        ["Secret"] = true,
-        ["Cosmic"] = true,
-        ["Divine"] = true,
-        ["Mythic"] = true,
-        ["Legendary"] = true,
-        ["Epic"] = true,
-        ["Rare"] = true,
-        ["Uncommon"] = true,
-        ["Common"] = true
+        ["Infinity"] = true, ["Celestial"] = true, ["Secret"] = true,
+        ["Cosmic"] = true, ["Divine"] = true, ["Mythic"] = true,
+        ["Legendary"] = true, ["Epic"] = true, ["Rare"] = true,
+        ["Uncommon"] = true, ["Common"] = true
     }
 }
 
@@ -96,24 +89,21 @@ local function getExactTreadmillBelt()
 end
 
 --------------------------------------------------------------------
--- 🔍 DETEKSI RARITY TELUR
+-- 🔍 DETEKSI RARITY
 --------------------------------------------------------------------
-local function getEggRarity(eggModel)
-    local rawText = (eggModel.Name .. " " .. eggModel:GetFullName()):lower()
-    
-    local attr = eggModel:GetAttribute("Rarity")
+local function getEggRarity(model)
+    local rawText = (model.Name .. " " .. model:GetFullName()):lower()
+    local attr = model:GetAttribute("Rarity") or (model.Parent and model.Parent:GetAttribute("Rarity"))
     if attr then rawText = rawText .. " " .. tostring(attr):lower() end
 
-    for _, v in ipairs(eggModel:GetDescendants()) do
+    for _, v in ipairs(model:GetDescendants()) do
         if v:IsA("StringValue") or v:IsA("TextLabel") then
             rawText = rawText .. " " .. tostring(v.Value or v.Text):lower()
         end
     end
 
     for rarity, weight in pairs(RarityWeight) do
-        if rawText:find(rarity:lower()) then
-            return rarity, weight
-        end
+        if rawText:find(rarity:lower()) then return rarity, weight end
     end
     return "Common", 100
 end
@@ -126,7 +116,7 @@ local FilterTab = Window:CreateTab("Filter Rarity", 4483362458)
 local GymTab = Window:CreateTab("Gym Zone", 4483362458)
 
 FarmTab:CreateToggle({
-    Name = "Auto Steal Egg (Base Only)",
+    Name = "Auto Steal All Nests",
     CurrentValue = false,
     Callback = function(v)
         Settings.AutoSteal = v
@@ -135,7 +125,7 @@ FarmTab:CreateToggle({
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then 
                 Settings.SavedBaseCFrame = hrp.CFrame
-                Rayfield:Notify({Title = "Auto Steal", Content = "Aktif! Hanya scan Base musuh.", Duration = 2})
+                Rayfield:Notify({Title = "Auto Steal", Content = "Aktif! Scanning seluruh folder Nests.", Duration = 2.5})
             end
         end
     end
@@ -173,9 +163,7 @@ task.spawn(function()
         local hrp = char.HumanoidRootPart
         if not cachedTreadmillCFrame then
             cachedTreadmillCFrame = getExactTreadmillBelt()
-            if cachedTreadmillCFrame then
-                Settings.SavedTreadmillCFrame = cachedTreadmillCFrame
-            end
+            if cachedTreadmillCFrame then Settings.SavedTreadmillCFrame = cachedTreadmillCFrame end
         end
         if cachedTreadmillCFrame and not Settings.AutoSteal then
             hrp.CFrame = cachedTreadmillCFrame
@@ -185,7 +173,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- ⚡ LOGIKA AUTO STEAL BARU (KHUSUS BASE/PLOT MUSUH)
+-- ⚡ LOGIKA AUTO STEAL (KHUSUS MEMINDAI FOLDER 'NESTS')
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -198,9 +186,7 @@ task.spawn(function()
 
         if not hrp or not hum or hum.Health <= 0 then continue end
 
-        if not Settings.SavedBaseCFrame then
-            Settings.SavedBaseCFrame = hrp.CFrame
-        end
+        if not Settings.SavedBaseCFrame then Settings.SavedBaseCFrame = hrp.CFrame end
 
         local returnPoint = Settings.SavedBaseCFrame
         if Settings.AutoTreadmill and Settings.SavedTreadmillCFrame then
@@ -208,44 +194,25 @@ task.spawn(function()
         end
 
         local validTargets = {}
+        local worldAreas = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Areas")
 
-        -- 1. Cari Folder Plot/Base/Plots di Workspace
-        local plotsFolder = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Baseplates") or Workspace
+        if worldAreas then
+            for _, folder in ipairs(worldAreas:GetDescendants()) do
+                -- Hanya memindai folder bernama 'Nests' dan mengabaikan zona EggCarryBounds
+                if folder.Name == "Nests" and not folder:GetFullName():find("EggCarryBounds") then
+                    for _, nestModel in ipairs(folder:GetChildren()) do
+                        local targetPart = nestModel:FindFirstChild("EggFitBounds") or nestModel:FindFirstChild("EggSpotBottom") or nestModel:FindFirstChildWhichIsA("BasePart", true)
+                        local prompt = nestModel:FindFirstChildWhichIsA("ProximityPrompt", true) or nestModel.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
 
-        for _, plot in ipairs(plotsFolder:GetChildren()) do
-            -- Abaikan Plot milik player sendiri
-            local isMyPlot = false
-            for _, child in ipairs(plot:GetDescendants()) do
-                if child:IsA("TextLabel") or child:IsA("StringValue") then
-                    if child.Text == LocalPlayer.Name or child.Value == LocalPlayer.Name then
-                        isMyPlot = true
-                        break
-                    end
-                end
-            end
+                        if targetPart and prompt then
+                            local rName, rWeight = getEggRarity(nestModel)
 
-            if not isMyPlot then
-                -- Scan ProximityPrompt yang HANYA ada di dalam Plot musuh
-                for _, prompt in ipairs(plot:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local parent = prompt.Parent
-                        if parent then
-                            local fullName = (prompt.Name .. " " .. prompt.ActionText .. " " .. parent.Name .. " " .. parent:GetFullName()):lower()
-
-                            -- Blokir total kata kunci portal
-                            if not (fullName:find("portal") or fullName:find("enter") or fullName:find("teleport") or fullName:find("world") or fullName:find("enchanted") or fullName:find("fuse")) then
-                                local rName, rWeight = getEggRarity(parent)
-
-                                if Settings.Rarities[rName] then
-                                    local part = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
-                                    if part then
-                                        table.insert(validTargets, {
-                                            prompt = prompt,
-                                            part = part,
-                                            weight = rWeight
-                                        })
-                                    end
-                                end
+                            if Settings.Rarities[rName] then
+                                table.insert(validTargets, {
+                                    prompt = prompt,
+                                    part = targetPart,
+                                    weight = rWeight
+                                })
                             end
                         end
                     end
@@ -253,32 +220,25 @@ task.spawn(function()
             end
         end
 
-        -- Urutkan berdasarkan nilai telur
         table.sort(validTargets, function(a, b) return a.weight > b.weight end)
 
-        -- Eksekusi Teleportasi
         if #validTargets > 0 then
             local target = validTargets[1]
             local targetPos = target.part.Position
 
-            -- Teleport langsung ke atas telur di Base musuh
+            -- Teleportasi presisi tepat di atas lokasi EggFitBounds/Nest
             hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
             hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
             task.wait(0.1)
 
-            -- Ambil telur
             target.prompt.HoldDuration = 0
             target.prompt.MaxActivationDistance = 50
             target.prompt.RequiresLineOfSight = false
-
-            pcall(function()
-                fireproximityprompt(target.prompt)
-            end)
+            
+            pcall(function() fireproximityprompt(target.prompt) end)
 
             task.wait(0.1)
 
-            -- Balik ke Base
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = returnPoint
                 char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
