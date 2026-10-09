@@ -1,5 +1,5 @@
 -- ==================================================
--- 🚀 SYADZZ HUB — REDESIGN ORION UI & FIXED TELEPORT
+-- 🚀 SYADZZ HUB — SPECIALIZED BASE/PLOT EGG STEALER
 -- ⚠️ AUTO TREADMILL TIDAK DIUBAH SEKALI PUN ⚠️
 -- ==================================================
 
@@ -8,21 +8,19 @@ local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Clean up GUI lama
 pcall(function()
-    if CoreGui:FindFirstChild("Orion") then CoreGui.Orion:Destroy() end
-    if CoreGui:FindFirstChild("KavoUI") then CoreGui.KavoUI:Destroy() end
+    if CoreGui:FindFirstChild("Rayfield") then CoreGui.Rayfield:Destroy() end
     if CoreGui:FindFirstChild("SyadzzMasterHub") then CoreGui.SyadzzMasterHub:Destroy() end
 end)
 
--- Orion Library (GUI Bagus & Modern)
-local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Window = OrionLib:CreateWindow({
-    Name = "SYADZZ HUB 🥚 | Steal an Egg",
-    HidePremium = true,
-    SaveConfig = false,
-    ConfigFolder = "SyadzzHub"
+local Window = Rayfield:CreateWindow({
+    Name = "SYADZZ HUB 🥚 | Fix Total Steal An Egg",
+    LoadingTitle = "SYADZZ HUB",
+    LoadingSubtitle = "Anti-Portal & Direct Plot Steal",
+    ConfigurationSaving = { Enabled = false },
+    KeySystem = false
 })
 
 local Settings = {
@@ -30,7 +28,7 @@ local Settings = {
     AutoTreadmill = false,
     SavedBaseCFrame = nil,
     SavedTreadmillCFrame = nil,
-    StealDelay = 0.15,
+    StealDelay = 0.2,
     Rarities = {
         ["Infinity"] = true,
         ["Celestial"] = true,
@@ -41,8 +39,8 @@ local Settings = {
         ["Legendary"] = true,
         ["Epic"] = true,
         ["Rare"] = true,
-        ["Uncommon"] = false,
-        ["Common"] = false
+        ["Uncommon"] = true,
+        ["Common"] = true
     }
 }
 
@@ -100,85 +98,60 @@ end
 --------------------------------------------------------------------
 -- 🔍 DETEKSI RARITY TELUR
 --------------------------------------------------------------------
-local function detectEggData(model)
-    local rarityName = "Common"
-    local rawStr = (model.Name .. " " .. model:GetFullName()):lower()
+local function getEggRarity(eggModel)
+    local rawText = (eggModel.Name .. " " .. eggModel:GetFullName()):lower()
+    
+    local attr = eggModel:GetAttribute("Rarity")
+    if attr then rawText = rawText .. " " .. tostring(attr):lower() end
 
-    local attr = model:GetAttribute("Rarity") or (model.Parent and model.Parent:GetAttribute("Rarity"))
-    if attr then
-        rawStr = rawStr .. " " .. tostring(attr):lower()
-    end
-
-    for _, v in ipairs(model:GetDescendants()) do
+    for _, v in ipairs(eggModel:GetDescendants()) do
         if v:IsA("StringValue") or v:IsA("TextLabel") then
-            rawStr = rawStr .. " " .. tostring(v.Value or v.Text):lower()
+            rawText = rawText .. " " .. tostring(v.Value or v.Text):lower()
         end
     end
 
-    if rawStr:find("infinity") then rarityName = "Infinity"
-    elseif rawStr:find("celestial") then rarityName = "Celestial"
-    elseif rawStr:find("secret") then rarityName = "Secret"
-    elseif rawStr:find("cosmic") then rarityName = "Cosmic"
-    elseif rawStr:find("divine") then rarityName = "Divine"
-    elseif rawStr:find("mythic") then rarityName = "Mythic"
-    elseif rawStr:find("legendary") then rarityName = "Legendary"
-    elseif rawStr:find("epic") then rarityName = "Epic"
-    elseif rawStr:find("rare") then rarityName = "Rare"
-    elseif rawStr:find("uncommon") then rarityName = "Uncommon"
+    for rarity, weight in pairs(RarityWeight) do
+        if rawText:find(rarity:lower()) then
+            return rarity, weight
+        end
     end
-
-    return rarityName, (RarityWeight[rarityName] or 100)
+    return "Common", 100
 end
 
 --------------------------------------------------------------------
--- TAMPILAN ORION UI (BERSIH & ELEGAN)
+-- TAMPILAN GUI
 --------------------------------------------------------------------
-local FarmTab = Window:MakeTab({Name = "Auto Farm", Icon = "rbxassetid://4483362458", PremiumOnly = false})
-local FilterTab = Window:MakeTab({Name = "Filter Rarity", Icon = "rbxassetid://4483362458", PremiumOnly = false})
-local GymTab = Window:MakeTab({Name = "Gym Zone", Icon = "rbxassetid://4483362458", PremiumOnly = false})
+local FarmTab = Window:CreateTab("Auto Steal", 4483362458)
+local FilterTab = Window:CreateTab("Filter Rarity", 4483362458)
+local GymTab = Window:CreateTab("Gym Zone", 4483362458)
 
-FarmTab:AddToggle({
-    Name = "Auto Steal Egg",
-    Default = false,
+FarmTab:CreateToggle({
+    Name = "Auto Steal Egg (Base Only)",
+    CurrentValue = false,
     Callback = function(v)
         Settings.AutoSteal = v
         if v then
             local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then 
-                Settings.SavedBaseCFrame = hrp.CFrame 
-                OrionLib:MakeNotification({Name = "Auto Steal", Content = "Base disimpan. Mulai teleportasi...", Image = "rbxassetid://4483362458", Time = 2})
+                Settings.SavedBaseCFrame = hrp.CFrame
+                Rayfield:Notify({Title = "Auto Steal", Content = "Aktif! Hanya scan Base musuh.", Duration = 2})
             end
         end
     end
 })
 
-FarmTab:AddSlider({
-    Name = "Steal Delay",
-    Min = 1,
-    Max = 10,
-    Default = 2,
-    Color = Color3.fromRGB(255,255,255),
-    Increment = 1,
-    ValueName = "Speed",
-    Callback = function(v)
-        Settings.StealDelay = v / 10
-    end
-})
-
 for _, r in ipairs({"Infinity", "Celestial", "Secret", "Cosmic", "Divine", "Mythic", "Legendary", "Epic", "Rare", "Uncommon", "Common"}) do
-    FilterTab:AddToggle({
+    FilterTab:CreateToggle({
         Name = "Target: " .. r,
-        Default = Settings.Rarities[r] or false,
-        Callback = function(v)
-            Settings.Rarities[r] = v
-        end
+        CurrentValue = Settings.Rarities[r] or false,
+        Callback = function(v) Settings.Rarities[r] = v end
     })
 end
 
-GymTab:AddToggle({
+GymTab:CreateToggle({
     Name = "Auto Treadmill",
-    Default = false,
+    CurrentValue = false,
     Callback = function(v)
         Settings.AutoTreadmill = v
         if not v then Settings.SavedTreadmillCFrame = nil end
@@ -212,7 +185,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- ⚡ LOGIKA AUTO STEAL (PASTI TELEPORT KE TELUR)
+-- ⚡ LOGIKA AUTO STEAL BARU (KHUSUS BASE/PLOT MUSUH)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -234,38 +207,45 @@ task.spawn(function()
             returnPoint = Settings.SavedTreadmillCFrame
         end
 
-        local targets = {}
+        local validTargets = {}
 
-        -- Pindai ProximityPrompt
-        for _, prompt in ipairs(Workspace:GetDescendants()) do
-            if prompt:IsA("ProximityPrompt") then
-                local parent = prompt.Parent
-                if parent then
-                    local fullText = (prompt.Name .. " " .. prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parent.Name .. " " .. parent:GetFullName()):lower()
+        -- 1. Cari Folder Plot/Base/Plots di Workspace
+        local plotsFolder = Workspace:FindFirstChild("Plots") or Workspace:FindFirstChild("Bases") or Workspace:FindFirstChild("Baseplates") or Workspace
 
-                    -- Abaikan portal/dunia/mesin/enchanted
-                    if fullText:find("portal") or fullText:find("enter") or fullText:find("teleport") or 
-                       fullText:find("fuse") or fullText:find("world") or fullText:find("enchanted") or 
-                       fullText:find("angel") or fullText:find("demon") or fullText:find("warp") or 
-                       fullText:find("machine") or fullText:find("spin") or fullText:find("craft") then
-                        continue
+        for _, plot in ipairs(plotsFolder:GetChildren()) do
+            -- Abaikan Plot milik player sendiri
+            local isMyPlot = false
+            for _, child in ipairs(plot:GetDescendants()) do
+                if child:IsA("TextLabel") or child:IsA("StringValue") then
+                    if child.Text == LocalPlayer.Name or child.Value == LocalPlayer.Name then
+                        isMyPlot = true
+                        break
                     end
+                end
+            end
 
-                    -- Cek telur
-                    local isEgg = fullText:find("egg") or fullText:find("telur") or fullText:find("steal") or fullText:find("take") or fullText:find("grab") or fullText:find("collect")
+            if not isMyPlot then
+                -- Scan ProximityPrompt yang HANYA ada di dalam Plot musuh
+                for _, prompt in ipairs(plot:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local parent = prompt.Parent
+                        if parent then
+                            local fullName = (prompt.Name .. " " .. prompt.ActionText .. " " .. parent.Name .. " " .. parent:GetFullName()):lower()
 
-                    if isEgg then
-                        local rName, weight = detectEggData(parent)
+                            -- Blokir total kata kunci portal
+                            if not (fullName:find("portal") or fullName:find("enter") or fullName:find("teleport") or fullName:find("world") or fullName:find("enchanted") or fullName:find("fuse")) then
+                                local rName, rWeight = getEggRarity(parent)
 
-                        if Settings.Rarities[rName] then
-                            local part = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
-                            if part then
-                                table.insert(targets, {
-                                    prompt = prompt,
-                                    part = part,
-                                    rarity = rName,
-                                    weight = weight
-                                })
+                                if Settings.Rarities[rName] then
+                                    local part = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
+                                    if part then
+                                        table.insert(validTargets, {
+                                            prompt = prompt,
+                                            part = part,
+                                            weight = rWeight
+                                        })
+                                    end
+                                end
                             end
                         end
                     end
@@ -273,32 +253,32 @@ task.spawn(function()
             end
         end
 
-        -- Urutkan target terbaik
-        table.sort(targets, function(a, b) return a.weight > b.weight end)
+        -- Urutkan berdasarkan nilai telur
+        table.sort(validTargets, function(a, b) return a.weight > b.weight end)
 
         -- Eksekusi Teleportasi
-        if #targets > 0 then
-            local bestTarget = targets[1]
-            local targetCFrame = bestTarget.part.CFrame
+        if #validTargets > 0 then
+            local target = validTargets[1]
+            local targetPos = target.part.Position
 
-            -- Teleport Paksa ke Karakter
-            hrp.CFrame = targetCFrame + Vector3.new(0, 2.5, 0)
+            -- Teleport langsung ke atas telur di Base musuh
+            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
+            task.wait(0.1)
 
-            task.wait(0.12)
+            -- Ambil telur
+            target.prompt.HoldDuration = 0
+            target.prompt.MaxActivationDistance = 50
+            target.prompt.RequiresLineOfSight = false
 
-            -- Bypass & Fire Prompt
             pcall(function()
-                bestTarget.prompt.HoldDuration = 0
-                bestTarget.prompt.MaxActivationDistance = 100
-                bestTarget.prompt.RequiresLineOfSight = false
-                fireproximityprompt(bestTarget.prompt)
+                fireproximityprompt(target.prompt)
             end)
 
             task.wait(0.1)
 
-            -- Balik ke asal
+            -- Balik ke Base
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = returnPoint
                 char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
@@ -306,5 +286,3 @@ task.spawn(function()
         end
     end
 end)
-
-OrionLib:Init()
