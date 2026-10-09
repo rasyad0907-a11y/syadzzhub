@@ -1,5 +1,5 @@
 -- ==================================================
--- 🚀 SYADZZ HUB — ENCHANTED & PORTAL PROOF AUTO STEAL
+-- 🚀 SYADZZ HUB — REDESIGN ORION UI & FIXED TELEPORT
 -- ⚠️ AUTO TREADMILL TIDAK DIUBAH SEKALI PUN ⚠️
 -- ==================================================
 
@@ -8,14 +8,22 @@ local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Bersihkan GUI lama jika ada
+-- Clean up GUI lama
 pcall(function()
+    if CoreGui:FindFirstChild("Orion") then CoreGui.Orion:Destroy() end
     if CoreGui:FindFirstChild("KavoUI") then CoreGui.KavoUI:Destroy() end
     if CoreGui:FindFirstChild("SyadzzMasterHub") then CoreGui.SyadzzMasterHub:Destroy() end
 end)
 
-local Kavo = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Kavo.CreateLib("SYADZZ HUB 🥚 | Anti-Portal Auto Steal", "Midnight")
+-- Orion Library (GUI Bagus & Modern)
+local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))()
+
+local Window = OrionLib:CreateWindow({
+    Name = "SYADZZ HUB 🥚 | Steal an Egg",
+    HidePremium = true,
+    SaveConfig = false,
+    ConfigFolder = "SyadzzHub"
+})
 
 local Settings = {
     AutoSteal = false,
@@ -90,78 +98,92 @@ local function getExactTreadmillBelt()
 end
 
 --------------------------------------------------------------------
--- 🔍 PEMBACA DATABASE LOKAL & DETEKSI RARITY
+-- 🔍 DETEKSI RARITY TELUR
 --------------------------------------------------------------------
 local function detectEggData(model)
     local rarityName = "Common"
-    
-    local attrRarity = model:GetAttribute("Rarity") or (model.Parent and model.Parent:GetAttribute("Rarity"))
-    if attrRarity then
-        rarityName = tostring(attrRarity)
-    else
-        local rarityVal = model:FindFirstChild("Rarity", true) or model:FindFirstChild("Tier", true)
-        if rarityVal and (rarityVal:IsA("StringValue") or rarityVal:IsA("TextLabel")) then
-            rarityName = tostring(rarityVal.Value or rarityVal.Text)
-        else
-            local rawStr = (model.Name .. " " .. model:GetFullName()):lower()
-            if rawStr:find("infinity") then rarityName = "Infinity"
-            elseif rawStr:find("celestial") then rarityName = "Celestial"
-            elseif rawStr:find("secret") then rarityName = "Secret"
-            elseif rawStr:find("cosmic") then rarityName = "Cosmic"
-            elseif rawStr:find("divine") then rarityName = "Divine"
-            elseif rawStr:find("mythic") then rarityName = "Mythic"
-            elseif rawStr:find("legendary") then rarityName = "Legendary"
-            elseif rawStr:find("epic") then rarityName = "Epic"
-            elseif rawStr:find("rare") then rarityName = "Rare"
-            elseif rawStr:find("uncommon") then rarityName = "Uncommon"
+    local rawStr = (model.Name .. " " .. model:GetFullName()):lower()
+
+    local attr = model:GetAttribute("Rarity") or (model.Parent and model.Parent:GetAttribute("Rarity"))
+    if attr then
+        rawStr = rawStr .. " " .. tostring(attr):lower()
+    end
+
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("StringValue") or v:IsA("TextLabel") then
+            rawStr = rawStr .. " " .. tostring(v.Value or v.Text):lower()
+        end
+    end
+
+    if rawStr:find("infinity") then rarityName = "Infinity"
+    elseif rawStr:find("celestial") then rarityName = "Celestial"
+    elseif rawStr:find("secret") then rarityName = "Secret"
+    elseif rawStr:find("cosmic") then rarityName = "Cosmic"
+    elseif rawStr:find("divine") then rarityName = "Divine"
+    elseif rawStr:find("mythic") then rarityName = "Mythic"
+    elseif rawStr:find("legendary") then rarityName = "Legendary"
+    elseif rawStr:find("epic") then rarityName = "Epic"
+    elseif rawStr:find("rare") then rarityName = "Rare"
+    elseif rawStr:find("uncommon") then rarityName = "Uncommon"
+    end
+
+    return rarityName, (RarityWeight[rarityName] or 100)
+end
+
+--------------------------------------------------------------------
+-- TAMPILAN ORION UI (BERSIH & ELEGAN)
+--------------------------------------------------------------------
+local FarmTab = Window:MakeTab({Name = "Auto Farm", Icon = "rbxassetid://4483362458", PremiumOnly = false})
+local FilterTab = Window:MakeTab({Name = "Filter Rarity", Icon = "rbxassetid://4483362458", PremiumOnly = false})
+local GymTab = Window:MakeTab({Name = "Gym Zone", Icon = "rbxassetid://4483362458", PremiumOnly = false})
+
+FarmTab:AddToggle({
+    Name = "Auto Steal Egg",
+    Default = false,
+    Callback = function(v)
+        Settings.AutoSteal = v
+        if v then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then 
+                Settings.SavedBaseCFrame = hrp.CFrame 
+                OrionLib:MakeNotification({Name = "Auto Steal", Content = "Base disimpan. Mulai teleportasi...", Image = "rbxassetid://4483362458", Time = 2})
             end
         end
     end
+})
 
-    for targetRarity, _ in pairs(RarityWeight) do
-        if rarityName:lower():find(targetRarity:lower()) then
-            return targetRarity, RarityWeight[targetRarity]
-        end
+FarmTab:AddSlider({
+    Name = "Steal Delay",
+    Min = 1,
+    Max = 10,
+    Default = 2,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 1,
+    ValueName = "Speed",
+    Callback = function(v)
+        Settings.StealDelay = v / 10
     end
-
-    return "Common", 100
-end
-
---------------------------------------------------------------------
--- TAMPILAN GUI
---------------------------------------------------------------------
-local MainTab = Window:NewTab("Auto Steal")
-local MainSection = MainTab:NewSection("Utama")
-
-MainSection:NewToggle("Auto Steal Egg", "Mencari & mengambil telur otomatis", function(v)
-    Settings.AutoSteal = v
-    if v then
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then Settings.SavedBaseCFrame = hrp.CFrame end
-    end
-end)
-
-MainSection:NewSlider("Kecepatan Pick (Delay)", "Jeda antar teleportasi", 10, 1, function(v)
-    Settings.StealDelay = v / 20
-end)
-
-local FilterTab = Window:NewTab("Filter Rarity")
-local FilterSection = FilterTab:NewSection("Prioritas Telur")
+})
 
 for _, r in ipairs({"Infinity", "Celestial", "Secret", "Cosmic", "Divine", "Mythic", "Legendary", "Epic", "Rare", "Uncommon", "Common"}) do
-    FilterSection:NewToggle("Target: " .. r, "Fokus ke jenis " .. r, function(v)
-        Settings.Rarities[r] = v
-    end)
+    FilterTab:AddToggle({
+        Name = "Target: " .. r,
+        Default = Settings.Rarities[r] or false,
+        Callback = function(v)
+            Settings.Rarities[r] = v
+        end
+    })
 end
 
-local GymTab = Window:NewTab("Gym Zone")
-local GymSection = GymTab:NewSection("Auto Treadmill")
-
-GymSection:NewToggle("Auto Treadmill", "Otomatis di treadmill", function(v)
-    Settings.AutoTreadmill = v
-    if not v then Settings.SavedTreadmillCFrame = nil end
-end)
+GymTab:AddToggle({
+    Name = "Auto Treadmill",
+    Default = false,
+    Callback = function(v)
+        Settings.AutoTreadmill = v
+        if not v then Settings.SavedTreadmillCFrame = nil end
+    end
+})
 
 --------------------------------------------------------------------
 -- LOOP TREADMILL — TETAP UTUH
@@ -190,7 +212,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- ⚡ AUTO STEAL EXECUTION LOOP (PROTEKSI KETAT ANTI DUNIA LAIN)
+-- ⚡ LOGIKA AUTO STEAL (PASTI TELEPORT KE TELUR)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -214,26 +236,25 @@ task.spawn(function()
 
         local targets = {}
 
+        -- Pindai ProximityPrompt
         for _, prompt in ipairs(Workspace:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
                 local parent = prompt.Parent
                 if parent then
                     local fullText = (prompt.Name .. " " .. prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parent.Name .. " " .. parent:GetFullName()):lower()
 
-                    -- 🚫 BLACKLIST TOTAL DARI PORTAL, AREA LAIN, DAN ENCHANTED ZONES
+                    -- Abaikan portal/dunia/mesin/enchanted
                     if fullText:find("portal") or fullText:find("enter") or fullText:find("teleport") or 
                        fullText:find("fuse") or fullText:find("world") or fullText:find("enchanted") or 
                        fullText:find("angel") or fullText:find("demon") or fullText:find("warp") or 
-                       fullText:find("travel") or fullText:find("dimension") or fullText:find("gate") or 
-                       fullText:find("machine") or fullText:find("spin") or fullText:find("craft") or 
-                       fullText:find("door") or fullText:find("zone") then
+                       fullText:find("machine") or fullText:find("spin") or fullText:find("craft") then
                         continue
                     end
 
-                    -- ✅ FILTER UTAMA: Hanya Menerima Prompt Murni Telur
-                    local isEggPrompt = fullText:find("egg") or fullText:find("telur") or fullText:find("steal") or fullText:find("take") or fullText:find("grab") or fullText:find("collect")
+                    -- Cek telur
+                    local isEgg = fullText:find("egg") or fullText:find("telur") or fullText:find("steal") or fullText:find("take") or fullText:find("grab") or fullText:find("collect")
 
-                    if isEggPrompt then
+                    if isEgg then
                         local rName, weight = detectEggData(parent)
 
                         if Settings.Rarities[rName] then
@@ -252,32 +273,32 @@ task.spawn(function()
             end
         end
 
-        -- Urutkan target dari Rarity tertinggi
+        -- Urutkan target terbaik
         table.sort(targets, function(a, b) return a.weight > b.weight end)
 
-        -- Eksekusi
+        -- Eksekusi Teleportasi
         if #targets > 0 then
             local bestTarget = targets[1]
-            local pos = bestTarget.part.Position
+            local targetCFrame = bestTarget.part.CFrame
 
-            -- Teleportasi tepat di lokasi telur
-            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2.2, 0))
+            -- Teleport Paksa ke Karakter
+            hrp.CFrame = targetCFrame + Vector3.new(0, 2.5, 0)
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            task.wait(0.08)
 
-            -- Bypass interaksi
-            bestTarget.prompt.HoldDuration = 0
-            bestTarget.prompt.MaxActivationDistance = 50
-            bestTarget.prompt.RequiresLineOfSight = false
+            task.wait(0.12)
 
+            -- Bypass & Fire Prompt
             pcall(function()
+                bestTarget.prompt.HoldDuration = 0
+                bestTarget.prompt.MaxActivationDistance = 100
+                bestTarget.prompt.RequiresLineOfSight = false
                 fireproximityprompt(bestTarget.prompt)
             end)
 
-            task.wait(0.08)
+            task.wait(0.1)
 
-            -- Kembalikan posisi karakter ke lokasi semula
+            -- Balik ke asal
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = returnPoint
                 char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
@@ -285,3 +306,5 @@ task.spawn(function()
         end
     end
 end)
+
+OrionLib:Init()
