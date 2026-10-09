@@ -1,5 +1,5 @@
 -- ==================================================
--- 🚀 SYADZZ HUB — UNIVERSAL NEST EGG STEALER
+-- 🚀 SYADZZ HUB — DEBUG & FORCE NEST EGG STEALER
 -- ⚠️ AUTO TREADMILL TIDAK DIUBAH SEKALI PUN ⚠️
 -- ==================================================
 
@@ -16,9 +16,9 @@ end)
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SYADZZ HUB 🥚 | Universal Nest Stealer",
+    Name = "SYADZZ HUB 🥚 | Force Nest Stealer",
     LoadingTitle = "SYADZZ HUB",
-    LoadingSubtitle = "Targeting All Nests Automatically",
+    LoadingSubtitle = "Scanning All Prompts in Nests",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
 })
@@ -28,20 +28,7 @@ local Settings = {
     AutoTreadmill = false,
     SavedBaseCFrame = nil,
     SavedTreadmillCFrame = nil,
-    StealDelay = 0.15,
-    Rarities = {
-        ["Infinity"] = true, ["Celestial"] = true, ["Secret"] = true,
-        ["Cosmic"] = true, ["Divine"] = true, ["Mythic"] = true,
-        ["Legendary"] = true, ["Epic"] = true, ["Rare"] = true,
-        ["Uncommon"] = true, ["Common"] = true
-    }
-}
-
-local RarityWeight = {
-    ["Infinity"] = 1100, ["Celestial"] = 1000, ["Secret"] = 900,
-    ["Cosmic"] = 800, ["Divine"] = 700, ["Mythic"] = 600,
-    ["Legendary"] = 500, ["Epic"] = 400, ["Rare"] = 300,
-    ["Uncommon"] = 200, ["Common"] = 100
+    StealDelay = 0.2
 }
 
 --------------------------------------------------------------------
@@ -89,34 +76,13 @@ local function getExactTreadmillBelt()
 end
 
 --------------------------------------------------------------------
--- 🔍 DETEKSI RARITY
---------------------------------------------------------------------
-local function getEggRarity(model)
-    local rawText = (model.Name .. " " .. model:GetFullName()):lower()
-    local attr = model:GetAttribute("Rarity") or (model.Parent and model.Parent:GetAttribute("Rarity"))
-    if attr then rawText = rawText .. " " .. tostring(attr):lower() end
-
-    for _, v in ipairs(model:GetDescendants()) do
-        if v:IsA("StringValue") or v:IsA("TextLabel") then
-            rawText = rawText .. " " .. tostring(v.Value or v.Text):lower()
-        end
-    end
-
-    for rarity, weight in pairs(RarityWeight) do
-        if rawText:find(rarity:lower()) then return rarity, weight end
-    end
-    return "Common", 100
-end
-
---------------------------------------------------------------------
 -- TAMPILAN GUI
 --------------------------------------------------------------------
 local FarmTab = Window:CreateTab("Auto Steal", 4483362458)
-local FilterTab = Window:CreateTab("Filter Rarity", 4483362458)
 local GymTab = Window:CreateTab("Gym Zone", 4483362458)
 
 FarmTab:CreateToggle({
-    Name = "Auto Steal All Nests",
+    Name = "Auto Steal (Force All Nests)",
     CurrentValue = false,
     Callback = function(v)
         Settings.AutoSteal = v
@@ -125,19 +91,11 @@ FarmTab:CreateToggle({
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then 
                 Settings.SavedBaseCFrame = hrp.CFrame
-                Rayfield:Notify({Title = "Auto Steal", Content = "Aktif! Scanning seluruh folder Nests.", Duration = 2.5})
+                Rayfield:Notify({Title = "Auto Steal", Content = "Aktif! Memicu semua telur di folder Nests.", Duration = 2.5})
             end
         end
     end
 })
-
-for _, r in ipairs({"Infinity", "Celestial", "Secret", "Cosmic", "Divine", "Mythic", "Legendary", "Epic", "Rare", "Uncommon", "Common"}) do
-    FilterTab:CreateToggle({
-        Name = "Target: " .. r,
-        CurrentValue = Settings.Rarities[r] or false,
-        Callback = function(v) Settings.Rarities[r] = v end
-    })
-end
 
 GymTab:CreateToggle({
     Name = "Auto Treadmill",
@@ -173,7 +131,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------
--- ⚡ LOGIKA AUTO STEAL (KHUSUS MEMINDAI FOLDER 'NESTS')
+-- ⚡ LOGIKA AUTO STEAL (FORCE SCAN ALL NESTS PROMPTS)
 --------------------------------------------------------------------
 task.spawn(function()
     while true do
@@ -193,55 +151,44 @@ task.spawn(function()
             returnPoint = Settings.SavedTreadmillCFrame
         end
 
-        local validTargets = {}
         local worldAreas = Workspace:FindFirstChild("World") and Workspace.World:FindFirstChild("Areas")
 
         if worldAreas then
             for _, folder in ipairs(worldAreas:GetDescendants()) do
-                -- Hanya memindai folder bernama 'Nests' dan mengabaikan zona EggCarryBounds
+                -- Hanya mencari folder bernama Nests dan bukan EggCarryBounds
                 if folder.Name == "Nests" and not folder:GetFullName():find("EggCarryBounds") then
-                    for _, nestModel in ipairs(folder:GetChildren()) do
-                        local targetPart = nestModel:FindFirstChild("EggFitBounds") or nestModel:FindFirstChild("EggSpotBottom") or nestModel:FindFirstChildWhichIsA("BasePart", true)
-                        local prompt = nestModel:FindFirstChildWhichIsA("ProximityPrompt", true) or nestModel.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+                    for _, prompt in ipairs(folder:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") then
+                            local parentPart = prompt.Parent
+                            if parentPart and parentPart:IsA("BasePart") then
+                                local targetPos = parentPart.Position
 
-                        if targetPart and prompt then
-                            local rName, rWeight = getEggRarity(nestModel)
+                                -- Teleportasi presisi tepat di atas posisi part telur
+                                hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+                                hrp.AssemblyLinearVelocity = Vector3.zero
+                                task.wait(0.12)
 
-                            if Settings.Rarities[rName] then
-                                table.insert(validTargets, {
-                                    prompt = prompt,
-                                    part = targetPart,
-                                    weight = rWeight
-                                })
+                                prompt.HoldDuration = 0
+                                prompt.MaxActivationDistance = 100
+                                prompt.RequiresLineOfSight = false
+                                
+                                pcall(function() 
+                                    fireproximityprompt(prompt)
+                                end)
+
+                                task.wait(0.12)
+
+                                -- Kembalikan posisi karakter
+                                if char and char:FindFirstChild("HumanoidRootPart") then
+                                    char.HumanoidRootPart.CFrame = returnPoint
+                                    char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                                end
+                                
+                                break -- Ambil 1 telur per loop
                             end
                         end
                     end
                 end
-            end
-        end
-
-        table.sort(validTargets, function(a, b) return a.weight > b.weight end)
-
-        if #validTargets > 0 then
-            local target = validTargets[1]
-            local targetPos = target.part.Position
-
-            -- Teleportasi presisi tepat di atas lokasi EggFitBounds/Nest
-            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            task.wait(0.1)
-
-            target.prompt.HoldDuration = 0
-            target.prompt.MaxActivationDistance = 50
-            target.prompt.RequiresLineOfSight = false
-            
-            pcall(function() fireproximityprompt(target.prompt) end)
-
-            task.wait(0.1)
-
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                char.HumanoidRootPart.CFrame = returnPoint
-                char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
             end
         end
     end
