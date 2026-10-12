@@ -15,11 +15,8 @@ end
 -- Target Koordinat Safe Zone
 local SafeZoneVector = Vector3.new(-72.5000153, 3, 0)
 
--- Variabel Global
+-- Variable Custom Title
 _G.CustomTitleText = "🎥 STREAMING 🎥"
-_G.AutoGliderActive = false
-_G.TitleActive = true
-_G.FastSwingActive = false
 
 -- =============================================
 -- 1. TAMPILAN GUI SYADHUB (AVATAR & NAMA DINAMIS)
@@ -29,7 +26,7 @@ ScreenGui.Name = "SyadHubGui"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 285)
+MainFrame.Size = UDim2.new(0, 260, 0, 280) -- Diperbesar sedikit agar muat TextBox Title
 MainFrame.Position = UDim2.new(0.5, -130, 0.25, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
@@ -78,13 +75,13 @@ Line.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 Line.BorderSizePixel = 0
 Line.Parent = MainFrame
 
--- Input Box untuk Custom Title
+-- TextBox untuk Custom Title
 local TitleInput = Instance.new("TextBox")
-TitleInput.Size = UDim2.new(0.88, 0, 0, 32)
+TitleInput.Size = UDim2.new(0.88, 0, 0, 30)
 TitleInput.Position = UDim2.new(0.06, 0, 0.25, 0)
 TitleInput.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
 TitleInput.Text = _G.CustomTitleText
-TitleInput.PlaceholderText = "Ketik Custom Title Disini..."
+TitleInput.PlaceholderText = "Ketik Custom Title..."
 TitleInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleInput.TextSize = 12
 TitleInput.Font = Enum.Font.SourceSans
@@ -93,21 +90,9 @@ TitleInput.Parent = MainFrame
 Instance.new("UICorner", TitleInput).CornerRadius = UDim.new(0, 8)
 
 -- Tombol Fitur
-local ToggleTitle = Instance.new("TextButton")
-ToggleTitle.Size = UDim2.new(0.88, 0, 0, 34)
-ToggleTitle.Position = UDim2.new(0.06, 0, 0.38, 0)
-ToggleTitle.BackgroundColor3 = Color3.fromRGB(255, 120, 0)
-ToggleTitle.Text = "STREAMING TITLE: ON"
-ToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleTitle.TextSize = 12
-ToggleTitle.Font = Enum.Font.SourceSansBold
-ToggleTitle.Parent = MainFrame
-
-Instance.new("UICorner", ToggleTitle).CornerRadius = UDim.new(0, 8)
-
 local ToggleSwing = Instance.new("TextButton")
 ToggleSwing.Size = UDim2.new(0.88, 0, 0, 34)
-ToggleSwing.Position = UDim2.new(0.06, 0, 0.52, 0)
+ToggleSwing.Position = UDim2.new(0.06, 0, 0.38, 0)
 ToggleSwing.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ToggleSwing.Text = "SUPER FAST SWING: OFF"
 ToggleSwing.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -119,7 +104,7 @@ Instance.new("UICorner", ToggleSwing).CornerRadius = UDim.new(0, 8)
 
 local ToggleGlider = Instance.new("TextButton")
 ToggleGlider.Size = UDim2.new(0.88, 0, 0, 34)
-ToggleGlider.Position = UDim2.new(0.06, 0, 0.66, 0)
+ToggleGlider.Position = UDim2.new(0.06, 0, 0.53, 0)
 ToggleGlider.BackgroundColor3 = Color3.fromRGB(150, 50, 200)
 ToggleGlider.Text = "AUTO GLIDER: OFF"
 ToggleGlider.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -129,7 +114,19 @@ ToggleGlider.Parent = MainFrame
 
 Instance.new("UICorner", ToggleGlider).CornerRadius = UDim.new(0, 8)
 
--- Update Teks Title Realtime saat Diubah di TextBox
+local ToggleTitle = Instance.new("TextButton")
+ToggleTitle.Size = UDim2.new(0.88, 0, 0, 34)
+ToggleTitle.Position = UDim2.new(0.06, 0, 0.68, 0)
+ToggleTitle.BackgroundColor3 = Color3.fromRGB(255, 120, 0)
+ToggleTitle.Text = "STREAMING TITLE: ON"
+ToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleTitle.TextSize = 12
+ToggleTitle.Font = Enum.Font.SourceSansBold
+ToggleTitle.Parent = MainFrame
+
+Instance.new("UICorner", ToggleTitle).CornerRadius = UDim.new(0, 8)
+
+-- Update teks title otomatis ketika diedit di TextBox
 TitleInput:GetPropertyChangedSignal("Text"):Connect(function()
     _G.CustomTitleText = TitleInput.Text
     local char = LocalPlayer.Character
@@ -142,8 +139,12 @@ TitleInput:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 -- =============================================
--- 2. LOGIKA AUTO GLIDER KE SAFE ZONE (ASLI)
+-- 2. LOGIKA AUTO GLIDER KE SAFE ZONE
 -- =============================================
+_G.AutoGliderActive = false
+_G.TitleActive = true
+_G.FastSwingActive = false
+
 ToggleGlider.MouseButton1Click:Connect(function()
     _G.AutoGliderActive = not _G.AutoGliderActive
     if _G.AutoGliderActive then
@@ -155,23 +156,24 @@ ToggleGlider.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi Glider Asli (Terbang meluncur mulus ke Safe Zone)
+-- Fungsi Glider (Terbang halus dengan kecepatan tinggi menuju Safe Zone)
 local function startGlidingToSafeZone()
     pcall(function()
         local char = LocalPlayer.Character
         if not char or not char:FindFirstChild("HumanoidRootPart") then return end
         local hrp = char.HumanoidRootPart
         
+        -- Terbang meluncur (Glider) secara mulus selama beberapa frame
         local targetPos = SafeZoneVector
         while (hrp.Position - targetPos).Magnitude > 5 and _G.AutoGliderActive do
             local direction = (targetPos - hrp.Position).Unit
-            hrp.CFrame = hrp.CFrame + (direction * 3.5)
+            hrp.CFrame = hrp.CFrame + (direction * 3.5) -- Kecepatan luncur glider
             RunService.RenderStepped:Wait()
         end
     end)
 end
 
--- Deteksi Tombol "Jatuhkan" / "Lari" / "Drop" Asli
+-- Deteksi Tombol "LARI!" / "Jatuhkan" atau Item Bawaan untuk Memicu Glider
 task.spawn(function()
     while true do
         if _G.AutoGliderActive then
@@ -181,9 +183,10 @@ task.spawn(function()
                     for _, gui in pairs(playerGui:GetDescendants()) do
                         if gui:IsA("TextLabel") or gui:IsA("TextButton") then
                             local txt = gui.Name:lower() .. " " .. gui.Text:lower()
+                            -- Jika teks "Jatuhkan" atau "Lari" aktif di layar
                             if (txt:find("jatuhkan") or txt:find("drop") or txt:find("lari")) and gui.Visible then
                                 startGlidingToSafeZone()
-                                task.wait(1.5)
+                                task.wait(1.5) -- Jeda agar glider selesai sebelum memicu ulang
                                 break
                             end
                         end
@@ -218,7 +221,7 @@ local function applyTitle()
                 local textLabel = Instance.new("TextLabel")
                 textLabel.Size = UDim2.new(1, 0, 1, 0)
                 textLabel.BackgroundTransparency = 1
-                textLabel.Text = _G.CustomTitleText
+                textLabel.Text = _G.CustomTitleText or "🎥 STREAMING 🎥"
                 textLabel.TextColor3 = Color3.fromRGB(255, 40, 40)
                 textLabel.TextStrokeTransparency = 0.1
                 textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -229,7 +232,7 @@ local function applyTitle()
                 billboard.Parent = head
             else
                 if billboard:FindFirstChild("TextLabel") then
-                    billboard.TextLabel.Text = _G.CustomTitleText
+                    billboard.TextLabel.Text = _G.CustomTitleText or "🎥 STREAMING 🎥"
                 end
             end
         end
@@ -307,4 +310,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("SyadHub Loaded Successfully!")
+print("SyadHub Auto Glider Loaded!")
