@@ -15,7 +15,7 @@ end
 -- Target Koordinat Safe Zone
 local SafeZoneVector = Vector3.new(-72.5000153, 3, 0)
 
--- Variabel Custom Title
+-- Variabel Global
 _G.CustomTitleText = "🎥 STREAMING 🎥"
 _G.AutoGliderActive = false
 _G.TitleActive = true
@@ -29,7 +29,7 @@ ScreenGui.Name = "SyadHubGui"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 285) -- Ukuran diperbesar sedikit untuk input title
+MainFrame.Size = UDim2.new(0, 260, 0, 285)
 MainFrame.Position = UDim2.new(0.5, -130, 0.25, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
@@ -53,7 +53,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 180, 0, 22)
 Title.Position = UDim2.new(0.28, 0, 0.04, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "SYADHUB"
+Title.Text = "SYADHUB VVIP"
 Title.TextColor3 = Color3.fromRGB(0, 255, 150)
 Title.TextSize = 16
 Title.Font = Enum.Font.SourceSansBold
@@ -66,7 +66,7 @@ UserText.Position = UDim2.new(0.28, 0, 0.11, 0)
 UserText.BackgroundTransparency = 1
 UserText.Text = "@" .. LocalPlayer.Name
 UserText.TextColor3 = Color3.fromRGB(180, 180, 180)
-UserText.TextSize = 15
+UserText.TextSize = 12
 UserText.Font = Enum.Font.SourceSans
 UserText.TextXAlignment = Enum.TextXAlignment.Left
 UserText.Parent = MainFrame
@@ -86,7 +86,7 @@ TitleInput.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
 TitleInput.Text = _G.CustomTitleText
 TitleInput.PlaceholderText = "Ketik Custom Title Disini..."
 TitleInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleInput.TextSize = 15
+TitleInput.TextSize = 12
 TitleInput.Font = Enum.Font.SourceSans
 TitleInput.Parent = MainFrame
 
@@ -129,7 +129,7 @@ ToggleGlider.Parent = MainFrame
 
 Instance.new("UICorner", ToggleGlider).CornerRadius = UDim.new(0, 8)
 
--- Update teks title secara langsung ketika mengetik di TextBox
+-- Update Teks Title Realtime saat Diubah di TextBox
 TitleInput:GetPropertyChangedSignal("Text"):Connect(function()
     _G.CustomTitleText = TitleInput.Text
     local char = LocalPlayer.Character
@@ -142,7 +142,7 @@ TitleInput:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 -- =============================================
--- 2. LOGIKA AUTO GLIDER KE SAFE ZONE
+-- 2. LOGIKA AUTO GLIDER KE SAFE ZONE (ASLI)
 -- =============================================
 ToggleGlider.MouseButton1Click:Connect(function()
     _G.AutoGliderActive = not _G.AutoGliderActive
@@ -155,7 +155,7 @@ ToggleGlider.MouseButton1Click:Connect(function()
     end
 end)
 
--- Fungsi Glider (Terbang halus dengan kecepatan tinggi menuju Safe Zone)
+-- Fungsi Glider Asli (Terbang meluncur mulus ke Safe Zone)
 local function startGlidingToSafeZone()
     pcall(function()
         local char = LocalPlayer.Character
@@ -171,7 +171,7 @@ local function startGlidingToSafeZone()
     end)
 end
 
--- Deteksi Tombol "LARI!" / "Jatuhkan" untuk Glider
+-- Deteksi Tombol "Jatuhkan" / "Lari" / "Drop" Asli
 task.spawn(function()
     while true do
         if _G.AutoGliderActive then
@@ -307,4 +307,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("SyadHub Auto Glider & Custom Title Loaded!")
+print("SyadHub Loaded Successfully!")
